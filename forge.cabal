@@ -19,8 +19,12 @@ source-repository head
   location: https://github.com/githubuser/forge
 
 library
+  ghc-options: -Wall
   exposed-modules:
-      Forge
+      Forge.Generate
+      Forge.Lift
+      Forge.Types
+      Forge.Internal.Types
   other-modules:
       Paths_forge
   hs-source-dirs:
