@@ -1,3 +1,7 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE RankNTypes #-}
@@ -26,7 +30,14 @@ module Forge.Internal.Types
   -- * Generation
   -- $generated
   , Generated(..)
+  -- * Inputs to a form
+  , Input(..)
+  , Key(..)
+  , Path(..)
   ) where
+
+import Data.String
+import Data.Text (Text)
 
 --------------------------------------------------------------------------------
 -- $form-type
@@ -125,19 +136,23 @@ class FormAction index where
 -- @
 --
 -- Where the 'HtmlInput' type comes from the html-input package.
-class FormField index a where
-  type Field index a
+class FormField index where
+  type Field index :: * -> *
+  parseFieldInput :: Field index a -> Input -> Either (Error index) a
+  viewField :: Key -> Field index a -> View index
 
 -- | The error type of the form.
 --
 -- @
 -- data App
--- data MyError = GeneralError String
+-- data MyError = MissingField !Key
 -- instance FormError App where
 --   type Error App = MyError
+--   missingFieldError = MissingField
 -- @
 class FormError index where
    type Error index
+   missingFieldError :: Key -> Error index
 
 --------------------------------------------------------------------------------
 -- $lifting
@@ -176,6 +191,33 @@ data Generated index a =
 
 -- | Map over the result value.
 deriving instance Functor (Generated index)
+deriving instance Traversable (Generated index)
+deriving instance Foldable (Generated index)
 
 -- | Combine the results.
 instance Applicative (Generated index)
+
+--------------------------------------------------------------------------------
+-- Input types
+
+-- | A form field key.
+newtype Key =
+  Key
+    { unKey :: Text
+    }
+  deriving (Show, Eq, Ord, IsString)
+
+-- | A path to a field.
+data Path
+  = PathBegin !Path
+  | InMapValue !Path
+  | InApLeft !Path
+  | InApRight !Path
+  | PathEnd
+  deriving (Show, Eq, Ord)
+
+-- | An input from a form.
+data Input
+  = TextInput !Text
+  | FileInput !FilePath
+  deriving (Show, Eq, Ord)

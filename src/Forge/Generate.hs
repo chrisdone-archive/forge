@@ -1,3 +1,8 @@
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE LambdaCase #-}
@@ -9,24 +14,100 @@
 
 module Forge.Generate
   ( generate
-  , Generated
+  , view
   ) where
 
-import Data.Bifunctor
-import Forge.Internal.Types
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
+import           Forge.Internal.Types
+
+-- IDEA: rather than specifying field names in the form itself, do a
+-- transform of the keys later? Custom names are inherently
+-- non-compositional, but a rewrite for the purposes of browser
+-- completion ain't bad. Or something else, as a separate pass, with
+-- hints.
 
 -- | Generate a form in the given action context.
 generate ::
-     (m ~ Action index, Functor m, Applicative m)
-  => Form index a
+     forall index m a.
+     ( m ~ Action index
+     , Monad m
+     , FormError index
+     , Monoid (View index)
+     , FormField index
+     )
+  => Map Key Input
+  -- ^ The inputs to your form.
+  -> Form index a
   -- ^ The description of your form.
   -> m (Generated index a)
   -- ^ The generated resut of the view and any value or errors.
-generate =
-  \case
-    ValueForm m -> fmap pure m
-    MapValueForm f form -> fmap (fmap f) (generate form)
-    ApValueForm f x -> (<*>) <$> generate f <*> generate x
-    ViewForm m -> fmap pureView m
+generate inputs = go PathBegin
   where
-    pureView view = Generated {generatedView = view, generatedValue = pure ()}
+    go :: forall x. (Path -> Path) -> Form index x -> m (Generated index x)
+    go path =
+      \case
+        ValueForm m -> fmap pure m
+        MapValueForm f form -> fmap (fmap f) (go (path . InMapValue) form)
+        ApValueForm f x ->
+          (<*>) <$> go (path . InApLeft) f <*> go (path . InApRight) x
+        ViewForm m -> fmap pureView m
+        FieldForm m -> do
+          field <- m
+          let key = pathToKey (path PathEnd)
+              generatedView = viewField @index key field
+          case M.lookup key inputs of
+            Nothing ->
+              pure
+                (Generated
+                   { generatedValue = Left (pure (missingFieldError @index key))
+                   , generatedView
+                   })
+            Just input ->
+              case parseFieldInput @index field input of
+                Left errorIndexed ->
+                  pure
+                    (Generated
+                       { generatedValue = Left (pure errorIndexed)
+                       , generatedView
+                       })
+                Right a ->
+                  pure (Generated {generatedView, generatedValue = Right a})
+    pureView v = Generated {generatedView = v, generatedValue = pure ()}
+
+-- | Convert a path to a rendered key.
+pathToKey :: Path -> Key
+pathToKey = Key . go
+  where
+    go =
+      \case
+        PathBegin path -> "/" <> go path
+        InMapValue path -> "m/" <> go path
+        InApLeft path -> "l/" <> go path
+        InApRight path -> "r/" <> go path
+        PathEnd -> ""
+
+-- | View a form in the given action context.
+view ::
+     forall index f a.
+     ( f ~ Action index
+     , Monoid (View index)
+     , Functor f
+     , Applicative f
+     , FormField index
+     )
+  => Form index a
+  -- ^ The description of your form.
+  -> f (View index)
+  -- ^ The view of the form, no validations.
+view = go PathBegin
+  where
+    go :: forall x. (Path -> Path) -> Form index x -> f (View index)
+    go path =
+      \case
+        ValueForm _ -> pure mempty
+        MapValueForm _ form -> go (path . InMapValue) form
+        ApValueForm f x ->
+          (<>) <$> go (path . InApLeft) f <*> go (path . InApRight) x
+        ViewForm m -> m
+        FieldForm m -> fmap (viewField @index (pathToKey (path PathEnd))) m
