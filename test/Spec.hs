@@ -59,15 +59,40 @@ main =
                       (generate @Lucid mempty (FieldForm (pure IntegerField)))))
                 (Failure [MissingInput "/"]))
            it
-             "Invalid input format"
+             "Missing input [multiple]"
+             (shouldBe
+                (generatedValue
+                   (runIdentity
+                      (generate
+                         @Lucid
+                         mempty
+                         (FieldForm (pure IntegerField) *>
+                          FieldForm (pure TextField)))))
+                (Failure [MissingInput "/l/m/", MissingInput "/r/"]))
+           it
+             "Invalid input type"
              (shouldBe
                 (generatedValue
                    (runIdentity
                       (generate
                          @Lucid
                          (M.singleton "/" (FileInput ""))
+                         (FieldForm (pure IntegerField) *>
+                          FieldForm (pure TextField)))))
+                (Failure
+                   [ MissingInput (Key {unKey = "/l/m/"})
+                   , MissingInput (Key {unKey = "/r/"})
+                   ]))
+           it
+             "Invalid input format"
+             (shouldBe
+                (generatedValue
+                   (runIdentity
+                      (generate
+                         @Lucid
+                         (M.singleton "/" (TextInput "x"))
                          (FieldForm (pure IntegerField)))))
-                (Failure [InvalidInputFormat "/" (FileInput "")]))
+                (Failure [InvalidInputFormat "/" (TextInput "x")]))
            it
              "Form parsing"
              (shouldBe
