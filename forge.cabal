@@ -47,4 +47,6 @@ test-suite forge-test
     , forge
     , hspec
     , lucid
+    , validation
+    , containers
   default-language: Haskell2010

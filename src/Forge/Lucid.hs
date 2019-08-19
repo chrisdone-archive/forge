@@ -28,6 +28,7 @@ import           Text.Read (readMaybe)
 data Error
   = MissingInput Forge.Key
   | InvalidInputFormat Forge.Key Forge.Input
+  deriving (Show, Eq)
 
 -- | A standard Html5 field.
 data Field a where
