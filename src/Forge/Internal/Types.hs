@@ -38,6 +38,7 @@ module Forge.Internal.Types
 
 import Data.String
 import Data.Text (Text)
+import Data.Validation
 
 --------------------------------------------------------------------------------
 -- $form-type
@@ -172,6 +173,7 @@ data Lift from to =
     { liftView :: View from -> View to
     , liftError :: Error from -> Error to
     , liftAction :: forall a. Action from a -> Action to a
+    , liftField :: forall a. Field from a -> Field to a
     }
 
 --------------------------------------------------------------------------------
@@ -185,7 +187,7 @@ data Generated index a =
   Generated
     { generatedView :: !(View index)
       -- ^ The view for the page to display.
-    , generatedValue :: !(Either [Error index] a)
+    , generatedValue :: !(Validation [Error index] a)
       -- ^ Either a successful result, or else a list of (possibly
       -- empty) errors.
     }
@@ -196,7 +198,13 @@ deriving instance Traversable (Generated index)
 deriving instance Foldable (Generated index)
 
 -- | Combine the results.
-instance Applicative (Generated index)
+instance Monoid (View index) => Applicative (Generated index) where
+  pure x = Generated {generatedView = mempty, generatedValue = pure x}
+  (<*>) x y =
+    Generated
+      { generatedView = generatedView x <> generatedView y
+      , generatedValue = generatedValue x <*> generatedValue y
+      }
 
 --------------------------------------------------------------------------------
 -- Input types

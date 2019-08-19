@@ -19,6 +19,7 @@ module Forge.Generate
 
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import           Data.Validation
 import           Forge.Internal.Types
 
 -- IDEA: rather than specifying field names in the form itself, do a
@@ -60,7 +61,7 @@ generate inputs = go PathBegin
             Nothing ->
               pure
                 (Generated
-                   { generatedValue = Left (pure (missingInputError @index key))
+                   { generatedValue = Failure (pure (missingInputError @index key))
                    , generatedView
                    })
             Just input ->
@@ -68,11 +69,11 @@ generate inputs = go PathBegin
                 Left errorIndexed ->
                   pure
                     (Generated
-                       { generatedValue = Left (pure errorIndexed)
+                       { generatedValue = Failure (pure errorIndexed)
                        , generatedView
                        })
                 Right a ->
-                  pure (Generated {generatedView, generatedValue = Right a})
+                  pure (Generated {generatedView, generatedValue = pure a})
     pureView v = Generated {generatedView = v, generatedValue = pure ()}
 
 -- | Convert a path to a rendered key.

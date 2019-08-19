@@ -38,8 +38,12 @@ liftWith ::
   -- ^ Child form type.
   -> Form to a
   -- ^ Parent form type, which the child is embedded in.
-liftWith Lift {..} = go
+liftWith lift@Lift {..} = go
   where
     go =
       \case
         ViewForm m -> ViewForm (liftAction (fmap liftView m))
+        ValueForm m -> ValueForm (liftAction m)
+        MapValueForm f m -> MapValueForm f (liftWith lift m)
+        ApValueForm f x -> ApValueForm (liftWith lift f) (liftWith lift x)
+        FieldForm m -> FieldForm (liftAction (fmap liftField m))
