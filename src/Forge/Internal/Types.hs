@@ -138,7 +138,7 @@ class FormAction index where
 -- Where the 'HtmlInput' type comes from the html-input package.
 class FormField index where
   type Field index :: * -> *
-  parseFieldInput :: Field index a -> Input -> Either (Error index) a
+  parseFieldInput :: Key -> Field index a -> Input -> Either (Error index) a
   viewField :: Key -> Field index a -> View index
 
 -- | The error type of the form.
@@ -152,7 +152,8 @@ class FormField index where
 -- @
 class FormError index where
    type Error index
-   missingFieldError :: Key -> Error index
+   missingInputError :: Key -> Error index
+   invalidInputFormat :: Key -> Input -> Error index
 
 --------------------------------------------------------------------------------
 -- $lifting

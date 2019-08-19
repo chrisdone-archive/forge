@@ -60,11 +60,11 @@ generate inputs = go PathBegin
             Nothing ->
               pure
                 (Generated
-                   { generatedValue = Left (pure (missingFieldError @index key))
+                   { generatedValue = Left (pure (missingInputError @index key))
                    , generatedView
                    })
             Just input ->
-              case parseFieldInput @index field input of
+              case parseFieldInput @index key field input of
                 Left errorIndexed ->
                   pure
                     (Generated
