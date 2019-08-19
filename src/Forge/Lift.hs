@@ -11,6 +11,7 @@ module Forge.Lift
   , liftWith
   ) where
 
+import Data.Bifunctor
 import Forge.Internal.Types
 
 -- | Lift with the lifter from the 'FormLift' class.
@@ -47,3 +48,5 @@ liftWith lift@Lift {..} = go
         MapValueForm f m -> MapValueForm f (liftWith lift m)
         ApValueForm f x -> ApValueForm (liftWith lift f) (liftWith lift x)
         FieldForm m -> FieldForm (liftAction (fmap liftField m))
+        ParseForm f m ->
+          ParseForm (liftAction . fmap (first liftError) . f) (liftWith lift m)

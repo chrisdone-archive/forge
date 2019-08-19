@@ -79,6 +79,10 @@ data Form index a where
   -- | A terminal node in the form tree that represents a field; a
   -- producer of values (aside from 'ValueForm'), from user input.
   FieldForm :: Action index (Field index a) -> Form index a
+  -- | Parse a form's result.
+  ParseForm :: (x -> Action index (Either (Error index) a))
+            -> Form index x
+            -> Form index a
 
 -- | A regular functor over the @a@ in @Form index a@.
 instance Functor (Form i) where
@@ -222,6 +226,7 @@ data Path
   | InMapValue !Path
   | InApLeft !Path
   | InApRight !Path
+  | InParse !Path
   | PathEnd
   deriving (Show, Eq, Ord)
 

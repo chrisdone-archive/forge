@@ -56,10 +56,7 @@ main =
              (shouldBe
                 (generatedValue
                    (runIdentity
-                      (generate
-                         @Lucid
-                         mempty
-                         (FieldForm (pure IntegerField)))))
+                      (generate @Lucid mempty (FieldForm (pure IntegerField)))))
                 (Failure [MissingInput "/"]))
            it
              "Invalid input format"
@@ -70,4 +67,42 @@ main =
                          @Lucid
                          (M.singleton "/" (FileInput ""))
                          (FieldForm (pure IntegerField)))))
-                (Failure [InvalidInputFormat "/" (FileInput "")]))))
+                (Failure [InvalidInputFormat "/" (FileInput "")]))
+           it
+             "Form parsing"
+             (shouldBe
+                (generatedValue
+                   (runIdentity
+                      (generate
+                         @Lucid
+                         (M.singleton "/p/" (TextInput "6"))
+                         (ParseForm
+                            (\i ->
+                               pure
+                                 (if i > 5
+                                    then Right (i * 2)
+                                    else Left
+                                           (InvalidInputFormat
+                                              "/"
+                                              (FileInput ""))))
+                            (FieldForm (pure IntegerField))))))
+                (Success 12))
+           it
+             "Form parsing fail"
+             (shouldBe
+                (generatedValue
+                   (runIdentity
+                      (generate
+                         @Lucid
+                         (M.singleton "/p/" (TextInput "5"))
+                         (ParseForm
+                            (\i ->
+                               pure
+                                 (if i > 5
+                                    then Right i
+                                    else Left
+                                           (InvalidInputFormat
+                                              "/"
+                                              (FileInput ""))))
+                            (FieldForm (pure IntegerField))))))
+                (Failure [InvalidInputFormat (Key {unKey = "/"}) (FileInput "")]))))

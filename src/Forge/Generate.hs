@@ -20,7 +20,7 @@ module Forge.Generate
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import           Data.Validation
-import           Forge.Internal.Types
+import           Forge.Internal.Types hiding (Lift(..))
 
 -- IDEA: rather than specifying field names in the form itself, do a
 -- transform of the keys later? Custom names are inherently
@@ -61,7 +61,8 @@ generate inputs = go PathBegin
             Nothing ->
               pure
                 (Generated
-                   { generatedValue = Failure (pure (missingInputError @index key))
+                   { generatedValue =
+                       Failure (pure (missingInputError @index key))
                    , generatedView
                    })
             Just input ->
@@ -74,6 +75,19 @@ generate inputs = go PathBegin
                        })
                 Right a ->
                   pure (Generated {generatedView, generatedValue = pure a})
+        ParseForm f form -> do
+          generated@Generated {generatedView} <- go (path . InParse) form
+          case generatedValue generated of
+            Success a -> do
+              result <- f a
+              case result of
+                Left err ->
+                  pure
+                    (Generated {generatedView, generatedValue = Failure [err]})
+                Right r ->
+                  pure (Generated {generatedView, generatedValue = Success r})
+            Failure errs ->
+              pure (Generated {generatedView, generatedValue = Failure errs})
     pureView v = Generated {generatedView = v, generatedValue = pure ()}
 
 -- | Convert a path to a rendered key.
@@ -86,6 +100,7 @@ pathToKey = Key . go
         InMapValue path -> "m/" <> go path
         InApLeft path -> "l/" <> go path
         InApRight path -> "r/" <> go path
+        InParse path -> "p/" <> go path
         PathEnd -> ""
 
 -- | View a form in the given action context.
@@ -112,3 +127,4 @@ view = go PathBegin
           (<>) <$> go (path . InApLeft) f <*> go (path . InApRight) x
         ViewForm m -> m
         FieldForm m -> fmap (viewField @index (pathToKey (path PathEnd))) m
+        ParseForm _ form -> go (path . InParse) form
