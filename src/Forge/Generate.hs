@@ -22,12 +22,6 @@ import qualified Data.Map.Strict as M
 import           Data.Validation
 import           Forge.Internal.Types hiding (Lift(..))
 
--- IDEA: rather than specifying field names in the form itself, do a
--- transform of the keys later? Custom names are inherently
--- non-compositional, but a rewrite for the purposes of browser
--- completion ain't bad. Or something else, as a separate pass, with
--- hints.
-
 -- | Generate a form in the given action context.
 generate ::
      forall index m a.
