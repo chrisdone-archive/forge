@@ -18,7 +18,8 @@ main =
   hspec
     (describe
        "Lucid"
-       (do it
+       (do thTests
+           it
              "View"
              (shouldBe
                 (renderText
@@ -30,21 +31,6 @@ main =
                              FieldForm DynamicFieldName (pure IntegerField) <*>
                              FieldForm DynamicFieldName (pure TextField))))))
                 "<input name=\"/l/m/\" type=\"number\"><input name=\"/r/\">")
-           it
-             "View named"
-             (shouldBe
-                (renderText
-                   (runIdentity
-                      (view
-                         @LucidUnverified
-                         $$($$(verify
-                                 [|| let namedForm :: Form LucidUnverified (Integer, Text)
-                                         namedForm = ((,) <$>
-                                           FieldForm (StaticFieldName "foo") (pure IntegerField) <*>
-                                           FieldForm (StaticFieldName "bar") (pure TextField))
-                                     in namedForm
-                                  ||])))))
-                "<input name=\"foo\" type=\"number\"><input name=\"bar\">")
            it
              "Sequence"
              (shouldBe
@@ -146,6 +132,79 @@ main =
                                (FieldForm DynamicFieldName (pure IntegerField)))))))
                 (Success 12))
            it
+             "Floor"
+             (shouldBe
+                (renderText
+                   (runIdentity
+                      (generatedView
+                         (runIdentity
+                            (generate
+                               @Lucid
+                               (M.singleton "/p/p/" (TextInput "1"))
+                               (verified
+                                  (ParseForm
+                                     (\i ->
+                                        pure
+                                          (if i > 5
+                                             then Right (i * 2)
+                                             else Left
+                                                    (InvalidInputFormat
+                                                       "/wibble"
+                                                       (FileInput ""))))
+                                     (FloorForm
+                                        (\merr v ->
+                                           ( fmap (<>
+                                             case merr of
+                                               Nothing -> mempty
+                                               Just err ->
+                                                 case err of
+                                                   InvalidInputFormat {} ->
+                                                     p_ "invalid input format"
+                                                   MissingInput {} ->
+                                                     p_ "missing input!") v
+                                           , Nothing))
+                                        (FieldForm
+                                           DynamicFieldName
+                                           (pure IntegerField))))))))))
+                "<input name=\"/p/p/\" type=\"number\"><p>invalid input format</p>")
+           it
+             "Ceiling"
+             (shouldBe
+                (renderText
+                   (runIdentity
+                      (generatedView
+                         (runIdentity
+                            (generate
+                               @Lucid
+                               (M.singleton "/p/p/" (TextInput "1"))
+                               (verified
+                                  (CeilingForm
+                                     (\merr v ->
+                                        (
+                                          fmap (<> ul_
+                                             (mapM_
+                                                (\err ->
+                                                   case err of
+                                                     InvalidInputFormat {} ->
+                                                       li_ "invalid input format"
+                                                     MissingInput {} ->
+                                                       li_ "missing input!")
+                                                merr)) v
+                                        , []))
+                                     (ParseForm
+                                        (\i ->
+                                           pure
+                                             (if i > 5
+                                                then Right (i * 2)
+                                                else Left
+                                                       (InvalidInputFormat
+                                                          "/wibble"
+                                                          (FileInput ""))))
+                                        (FieldForm
+                                           DynamicFieldName
+                                           (pure IntegerField))))))))))
+                "<input name=\"/p/p/\" type=\"number\"><ul><li>invalid input format</li></ul>")
+           it
              "Form parsing fail"
              (shouldBe
                 (generatedValue
@@ -165,3 +224,21 @@ main =
                                                  (FileInput ""))))
                                (FieldForm DynamicFieldName (pure IntegerField)))))))
                 (Failure [InvalidInputFormat (Key {unKey = "/"}) (FileInput "")]))))
+
+thTests :: Spec
+thTests =
+           it
+             "View named"
+             (shouldBe
+                (renderText
+                   (runIdentity
+                      (view
+                         @LucidUnverified
+                         $$($$(verify
+                                 [|| let namedForm :: Form LucidUnverified (Integer, Text)
+                                         namedForm = ((,) <$>
+                                           FieldForm (StaticFieldName "foo") (pure IntegerField) <*>
+                                           FieldForm (StaticFieldName "bar") (pure TextField))
+                                     in namedForm
+                                  ||])))))
+                "<input name=\"foo\" type=\"number\"><input name=\"bar\">")

@@ -89,6 +89,14 @@ data Form index a where
   ParseForm :: (x -> Action index (Either (Error index) a))
             -> Form index x
             -> Form index a
+  -- | Transform a form's view using the error from above.
+  FloorForm :: (Maybe (Error index) -> Action index (View index) -> (Action index  (View index), Maybe (Error index)))
+            -> Form index a
+            -> Form index a
+  -- | Transform a form's view using errors from below.
+  CeilingForm :: ([Error index] -> Action index (View index) -> (Action index (View index), [Error index]))
+              -> Form index a
+              -> Form index a
 
 -- | A regular functor over the @a@ in @Form index a@.
 instance Functor (Form i) where
@@ -220,7 +228,7 @@ data Lift from to =
 -- | The generated view and value of a form.
 data Generated index a =
   Generated
-    { generatedView :: !(View index)
+    { generatedView :: !(Action index (View index))
       -- ^ The view for the page to display.
     , generatedValue :: !(Validation [Error index] a)
       -- ^ Either a successful result, or else a list of (possibly
@@ -233,11 +241,11 @@ deriving instance Traversable (Generated index)
 deriving instance Foldable (Generated index)
 
 -- | Combine the results.
-instance Monoid (View index) => Applicative (Generated index) where
-  pure x = Generated {generatedView = mempty, generatedValue = pure x}
+instance (Monoid (View index), Applicative (Action index)) => Applicative (Generated index) where
+  pure x = Generated {generatedView = pure mempty, generatedValue = pure x}
   (<*>) x y =
     Generated
-      { generatedView = generatedView x <> generatedView y
+      { generatedView = (<>) <$> generatedView x <*> generatedView y
       , generatedValue = generatedValue x <*> generatedValue y
       }
 
