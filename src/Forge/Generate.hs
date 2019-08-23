@@ -1,3 +1,8 @@
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -20,7 +25,8 @@ module Forge.Generate
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import           Data.Validation
-import           Forge.Internal.Types hiding (Lift(..))
+import           Forge.Internal.Types
+import           Forge.Verify
 
 -- | Generate a form in the given action context.
 generate ::
@@ -33,11 +39,11 @@ generate ::
      )
   => Map Key Input
   -- ^ The inputs to your form.
-  -> Form index a
+  -> VerifiedForm index a
   -- ^ The description of your form.
   -> m (Generated index a)
   -- ^ The generated resut of the view and any value or errors.
-generate inputs = go PathBegin
+generate inputs = go PathBegin . unVerifiedForm
   where
     go :: forall x. (Path -> Path) -> Form index x -> m (Generated index x)
     go path =
@@ -47,9 +53,12 @@ generate inputs = go PathBegin
         ApValueForm f x ->
           (<*>) <$> go (path . InApLeft) f <*> go (path . InApRight) x
         ViewForm m -> fmap pureView m
-        FieldForm m -> do
+        FieldForm name m -> do
           field <- m
-          let key = pathToKey (path PathEnd)
+          let key =
+                case name of
+                  DynamicFieldName -> pathToKey (path PathEnd)
+                  StaticFieldName text -> Key text
               generatedView = viewField @index key field
           case M.lookup key inputs of
             Nothing ->
@@ -106,11 +115,11 @@ view ::
      , Applicative f
      , FormField index
      )
-  => Form index a
+  => VerifiedForm index a
   -- ^ The description of your form.
   -> f (View index)
   -- ^ The view of the form, no validations.
-view = go PathBegin
+view = go PathBegin . unVerifiedForm
   where
     go :: forall x. (Path -> Path) -> Form index x -> f (View index)
     go path =
@@ -120,5 +129,9 @@ view = go PathBegin
         ApValueForm f x ->
           (<>) <$> go (path . InApLeft) f <*> go (path . InApRight) x
         ViewForm m -> m
-        FieldForm m -> fmap (viewField @index (pathToKey (path PathEnd))) m
+        FieldForm name m -> fmap (viewField @index key) m
+          where key =
+                  case name of
+                    DynamicFieldName -> pathToKey (path PathEnd)
+                    StaticFieldName text -> Key text
         ParseForm _ form -> go (path . InParse) form

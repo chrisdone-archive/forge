@@ -47,6 +47,7 @@ liftWith lift@Lift {..} = go
         ValueForm m -> ValueForm (liftAction m)
         MapValueForm f m -> MapValueForm f (liftWith lift m)
         ApValueForm f x -> ApValueForm (liftWith lift f) (liftWith lift x)
-        FieldForm m -> FieldForm (liftAction (fmap liftField m))
+        FieldForm name m ->
+          FieldForm (liftFieldName name) (liftAction (fmap liftField m))
         ParseForm f m ->
           ParseForm (liftAction . fmap (first liftError) . f) (liftWith lift m)

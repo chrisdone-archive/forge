@@ -1,12 +1,15 @@
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Data.Functor.Identity
 import qualified Data.Map.Strict as M
+import           Data.Text (Text)
 import           Data.Validation
 import           Forge.Generate
 import           Forge.Internal.Types
 import           Forge.Lucid
+import           Forge.Verify
 import           Lucid
 import           Test.Hspec
 
@@ -22,9 +25,26 @@ main =
                    (runIdentity
                       (view
                          @Lucid
-                         ((,) <$> FieldForm (pure IntegerField) <*>
-                          FieldForm (pure TextField)))))
+                         (verified
+                            ((,) <$>
+                             FieldForm DynamicFieldName (pure IntegerField) <*>
+                             FieldForm DynamicFieldName (pure TextField))))))
                 "<input name=\"/l/m/\" type=\"number\"><input name=\"/r/\">")
+           it
+             "View named"
+             (shouldBe
+                (renderText
+                   (runIdentity
+                      (view
+                         @LucidUnverified
+                         $$($$(verify
+                                 [|| let namedForm :: Form LucidUnverified (Integer, Text)
+                                         namedForm = ((,) <$>
+                                           FieldForm (StaticFieldName "foo") (pure IntegerField) <*>
+                                           FieldForm (StaticFieldName "bar") (pure TextField))
+                                     in namedForm
+                                  ||])))))
+                "<input name=\"foo\" type=\"number\"><input name=\"bar\">")
            it
              "Sequence"
              (shouldBe
@@ -32,11 +52,15 @@ main =
                    (runIdentity
                       (view
                          @Lucid
-                         ((,) <$>
-                          traverse
-                            (const (FieldForm (pure IntegerField)))
-                            [1 :: Int .. 3] <*>
-                          FieldForm (pure TextField)))))
+                         (verified
+                            ((,) <$>
+                             traverse
+                               (const
+                                  (FieldForm
+                                     DynamicFieldName
+                                     (pure IntegerField)))
+                               [1 :: Int .. 3] <*>
+                             FieldForm DynamicFieldName (pure TextField))))))
                 "<input name=\"/l/m/l/m/\" type=\"number\">\
                 \<input name=\"/l/m/r/l/m/\" type=\"number\">\
                 \<input name=\"/l/m/r/r/l/m/\" type=\"number\">\
@@ -49,14 +73,19 @@ main =
                       (generate
                          @Lucid
                          (M.singleton "/" (TextInput "5"))
-                         (FieldForm (pure IntegerField)))))
+                         (verified
+                            (FieldForm DynamicFieldName (pure IntegerField))))))
                 (Success 5))
            it
              "Missing input"
              (shouldBe
                 (generatedValue
                    (runIdentity
-                      (generate @Lucid mempty (FieldForm (pure IntegerField)))))
+                      (generate
+                         @Lucid
+                         mempty
+                         (verified
+                            (FieldForm DynamicFieldName (pure IntegerField))))))
                 (Failure [MissingInput "/"]))
            it
              "Missing input [multiple]"
@@ -66,8 +95,9 @@ main =
                       (generate
                          @Lucid
                          mempty
-                         (FieldForm (pure IntegerField) *>
-                          FieldForm (pure TextField)))))
+                         (verified
+                            (FieldForm DynamicFieldName (pure IntegerField) *>
+                             FieldForm DynamicFieldName (pure TextField))))))
                 (Failure [MissingInput "/l/m/", MissingInput "/r/"]))
            it
              "Invalid input type"
@@ -77,8 +107,9 @@ main =
                       (generate
                          @Lucid
                          (M.singleton "/" (FileInput ""))
-                         (FieldForm (pure IntegerField) *>
-                          FieldForm (pure TextField)))))
+                         (verified
+                            (FieldForm DynamicFieldName (pure IntegerField) *>
+                             FieldForm DynamicFieldName (pure TextField))))))
                 (Failure
                    [ MissingInput (Key {unKey = "/l/m/"})
                    , MissingInput (Key {unKey = "/r/"})
@@ -91,7 +122,8 @@ main =
                       (generate
                          @Lucid
                          (M.singleton "/" (TextInput "x"))
-                         (FieldForm (pure IntegerField)))))
+                         (verified
+                            (FieldForm DynamicFieldName (pure IntegerField))))))
                 (Failure [InvalidInputFormat "/" (TextInput "x")]))
            it
              "Form parsing"
@@ -101,16 +133,17 @@ main =
                       (generate
                          @Lucid
                          (M.singleton "/p/" (TextInput "6"))
-                         (ParseForm
-                            (\i ->
-                               pure
-                                 (if i > 5
-                                    then Right (i * 2)
-                                    else Left
-                                           (InvalidInputFormat
-                                              "/"
-                                              (FileInput ""))))
-                            (FieldForm (pure IntegerField))))))
+                         (verified
+                            (ParseForm
+                               (\i ->
+                                  pure
+                                    (if i > 5
+                                       then Right (i * 2)
+                                       else Left
+                                              (InvalidInputFormat
+                                                 "/"
+                                                 (FileInput ""))))
+                               (FieldForm DynamicFieldName (pure IntegerField)))))))
                 (Success 12))
            it
              "Form parsing fail"
@@ -120,14 +153,15 @@ main =
                       (generate
                          @Lucid
                          (M.singleton "/p/" (TextInput "5"))
-                         (ParseForm
-                            (\i ->
-                               pure
-                                 (if i > 5
-                                    then Right i
-                                    else Left
-                                           (InvalidInputFormat
-                                              "/"
-                                              (FileInput ""))))
-                            (FieldForm (pure IntegerField))))))
+                         (verified
+                            (ParseForm
+                               (\i ->
+                                  pure
+                                    (if i > 5
+                                       then Right i
+                                       else Left
+                                              (InvalidInputFormat
+                                                 "/"
+                                                 (FileInput ""))))
+                               (FieldForm DynamicFieldName (pure IntegerField)))))))
                 (Failure [InvalidInputFormat (Key {unKey = "/"}) (FileInput "")]))))
