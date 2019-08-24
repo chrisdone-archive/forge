@@ -29,10 +29,6 @@ module Forge.Internal.Types
   -- $field-names
   , FieldName(..)
   , FieldNameStatus(..)
-  -- * Lifting forms
-  -- $lifting
-  , FormLift(..)
-  , Lift(..)
   -- * Generation
   -- $generated
   , Generated(..)
@@ -197,27 +193,6 @@ class FormError index where
    type Error index
    missingInputError :: Key -> Error index
    invalidInputFormat :: Key -> Input -> Error index
-
---------------------------------------------------------------------------------
--- $lifting
---
--- When you want to change the index of a form to include it within
--- another, you can implement 'formLift' to convert from one to the
--- other.
-
--- | Lift one form into another.
-class FormLift from to where
-  formLift :: Lift from to
-
--- | A lift converts from one form to another.
-data Lift from to =
-  Lift
-    { liftView :: View from -> View to
-    , liftError :: Error from -> Error to
-    , liftAction :: forall a. Action from a -> Action to a
-    , liftField :: forall a. Field from a -> Field to a
-    , liftFieldName :: FieldName from -> FieldName to
-    }
 
 --------------------------------------------------------------------------------
 -- $generated

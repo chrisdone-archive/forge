@@ -22,7 +22,6 @@ library
   ghc-options: -Wall
   exposed-modules:
       Forge.Generate
-      Forge.Lift
       Forge.Types
       Forge.Lucid
       Forge.Verify
