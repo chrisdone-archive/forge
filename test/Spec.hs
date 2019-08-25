@@ -17,6 +17,8 @@ import           Test.Hspec
 data MyError
   = PasswordsMismatch Text Text
   | LucidError Error
+  | NumberTooLow Integer
+
 instance FormError MyError where
   missingInputError = LucidError . missingInputError
   invalidInputFormat k = LucidError . invalidInputFormat k
@@ -196,13 +198,15 @@ main =
                                                       PasswordsMismatch _ _ ->
                                                         p_
                                                           "passwords do not match"
+                                                      NumberTooLow _ ->
+                                                        p_ "number too low!"
                                                       LucidError er ->
                                                         case er of
                                                           InvalidInputFormat {} ->
-                                                            li_
+                                                            p_
                                                               "invalid input format"
                                                           MissingInput {} ->
-                                                            li_ "missing input!"
+                                                            p_ "missing input!"
                                               , Nothing))
                                     in (((,) <$>
                                          flooring
@@ -230,8 +234,8 @@ main =
                             @Identity
                             @(Html ())
                             @Field
-                            @Error
-                            (M.singleton "/c/p/" (TextInput "1"))
+                            @MyError
+                            (M.singleton "/c/p/e/" (TextInput "1"))
                             (verified
                                (CeilingForm
                                   (\merr v ->
@@ -240,10 +244,18 @@ main =
                                          (mapM_
                                             (\err ->
                                                case err of
-                                                 InvalidInputFormat {} ->
-                                                   li_ "invalid input format"
-                                                 MissingInput {} ->
-                                                   li_ "missing input!")
+                                                 PasswordsMismatch _ _ ->
+                                                   li_
+                                                     "passwords do not match"
+                                                 NumberTooLow _ ->
+                                                   li_ "number too low!"
+                                                 LucidError er ->
+                                                   case er of
+                                                     InvalidInputFormat {} ->
+                                                       li_
+                                                         "invalid input format"
+                                                     MissingInput {} ->
+                                                       li_ "missing input!")
                                             merr)
                                      , []))
                                   (ParseForm
@@ -251,12 +263,11 @@ main =
                                         pure
                                           (if i > 5
                                              then Right (i * 2)
-                                             else Left
-                                                    (InvalidInputFormat
-                                                       "/wibble"
-                                                       (FileInput ""))))
-                                     (FieldForm DynamicFieldName IntegerField))))))))
-                "<input name=\"/c/p/\" type=\"number\"><ul><li>invalid input format</li></ul>")
+                                             else Left (NumberTooLow i)))
+                                     (MapErrorForm
+                                        LucidError
+                                        (FieldForm DynamicFieldName IntegerField)))))))))
+                "<input name=\"/c/p/e/\" type=\"number\"><ul><li>number too low!</li></ul>")
            it
              "Form parsing fail"
              (shouldBe
