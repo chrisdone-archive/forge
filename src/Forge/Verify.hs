@@ -16,7 +16,6 @@
 
 module Forge.Verify
   ( verified
-  , FormVerification(..)
   , VerifiedForm
   , unVerifiedForm
   , verify
@@ -37,49 +36,58 @@ import           Language.Haskell.TH.Syntax hiding (lift)
 
 -- | Verification result of a form.
 data VerificationResult
-  = Verified
+  = VerifiedResult
   | DuplicateField !Text
   deriving (Eq, Show)
 
 -- | A form whose invariants have been verified statically.
-newtype VerifiedForm index a =
+newtype VerifiedForm index parse view field error a =
   VerifiedForm
-    { unVerifiedForm :: Form index a
+    { unVerifiedForm :: Form index parse view field error a
     }
 
 -- | A form whose invariants are verified in the type system can be
 -- immediately converted to a verified form.
 verified ::
-     (NameStatus index ~ 'FieldNamesOk) => Form index a -> VerifiedForm index a
+     Form 'Verified parse view field error a
+  -> VerifiedForm 'Verified parse view field error a
 verified = VerifiedForm
 
 -- | Smart constructor.
-maybeVerify :: Form index a -> Maybe (VerifiedForm index a)
+maybeVerify ::
+     Form index parse view field error a
+  -> Maybe (VerifiedForm index parse view field error a)
 maybeVerify frm =
   case runVerification frm of
-    Verified -> Just (VerifiedForm frm)
+    VerifiedResult -> Just (VerifiedForm frm)
     _ -> Nothing
 
 -- | Verify a form that needs verification.
-verify :: Q (TExp (Form index a)) -> Q (TExp (Q (TExp (VerifiedForm index a))))
+verify ::
+     Q (TExp (Form index parse view field error a))
+  -> Q (TExp (Q (TExp (VerifiedForm index parse view field error a))))
 verify q = do
   TExp expr <- q
   [|| case runVerification $$(q) of
-        Verified -> TExp <$> (appE (conE name) (pure expr))
+        VerifiedResult -> TExp <$> (appE (conE name) (pure expr))
         DuplicateField field -> error ("Duplicate field: " <> T.unpack field)
    ||]
   where name = 'VerifiedForm
 
 -- | Run verification on the form.
-runVerification :: Form index a -> VerificationResult
+runVerification :: Form index parse view field error a -> VerificationResult
 runVerification =
-  either DuplicateField (const Verified) . flip evalStateT Set.empty . go
+  either DuplicateField (const VerifiedResult) . flip evalStateT Set.empty . go
   where
-    go :: Form index x -> StateT (Set Text) (Either Text) ()
+    go ::
+         Form index parse view field error x
+      -> StateT (Set Text) (Either Text) ()
     go =
       \case
         ValueForm {} -> pure ()
         MapValueForm _ f -> go f
+        FloorForm _ f -> go f
+        CeilingForm _ f -> go f
         ApValueForm f x -> go f >> go x
         ViewForm {} -> pure ()
         ParseForm _ f -> go f

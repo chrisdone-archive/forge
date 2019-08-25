@@ -1,3 +1,4 @@
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
@@ -20,12 +21,11 @@ module Forge.Internal.Types
     Form(..)
     -- * Classes
   , FormError(..)
-  , FormVerification(..)
+  , FormIndex(..)
   , FormField(..)
   -- * Field names
   -- $field-names
   , FieldName(..)
-  , FieldNameStatus(..)
   -- * Generation
   -- $generated
   , Generated(..)
@@ -58,55 +58,55 @@ import Data.Validation
 -- @
 --
 -- Produces @ValueForm (pure ("Hello, World!"))@.
-data Form action view field error a where
-  -- | Produce a value in the action of your index.
+data Form index (parse :: * -> *) view (field :: * -> *) error a where
+  -- | Produce a pure value.
   ValueForm
-    :: action a
-    -> Form action view field error a
+    :: a
+    -> Form index parse view field error a
   -- | Map over the value. This mirrors 'fmap'.
   MapValueForm
     :: (a -> b)
-    -> Form action view field error a
-    -> Form action view field error b
+    -> Form index parse view field error a
+    -> Form index parse view field error b
   -- | Applicative application of a function to a value. Notice that
   -- this mirrors '<*>' or 'ap'.
   ApValueForm
-    :: Form action view field error (a -> b)
-    -> Form action view field error a
-    -> Form action view field error b
+    :: Form index parse view field error (a -> b)
+    -> Form index parse view field error a
+    -> Form index parse view field error b
   -- | Embed a view in a form, such as a label or some text.
   ViewForm
-    :: action view
-    -> Form action view field error ()
+    :: view
+    -> Form index parse view field error ()
   -- | A terminal node in the form tree that represents a field; a
   -- producer of values (aside from 'ValueForm'), from user input.
   FieldForm
     :: FieldName index
-    -> action (field a)
-    -> Form action view field error a
+    -> field a
+    -> Form index parse view field error a
   -- | Parse a form's result.
   ParseForm
-    :: (x -> action (Either (error) a))
-    -> Form action view field error x
-    -> Form action view field error a
+    :: (x -> parse (Either error a))
+    -> Form index parse view field error x
+    -> Form index parse view field error a
   -- | Transform a form's view using the error from above.
   FloorForm
-    :: (Maybe error -> action view -> (action view, Maybe (error)))
-    -> Form action view field error a
-    -> Form action view field error a
+    :: (Maybe error -> view -> (view, Maybe error))
+    -> Form index parse view field error a
+    -> Form index parse view field error a
   -- | Transform a form's view using errors from below.
   CeilingForm
-    :: ([error] -> action view -> (action view, [error]))
-    -> Form action view field error a
-    -> Form action view field error a
+    :: ([error] -> view -> (view, [error]))
+    -> Form index parse view field error a
+    -> Form index parse view field error a
 
-instance Functor (Form action view field error) where
+instance Functor (Form index parse view field error) where
   fmap = MapValueForm
 
 -- | Used to combine forms together.
-instance Applicative action => Applicative (Form action view field error) where
+instance Applicative (Form index parse view field error) where
   (<*>) = ApValueForm
-  pure = ValueForm . pure
+  pure = ValueForm
 
 --------------------------------------------------------------------------------
 -- Field names
@@ -116,26 +116,17 @@ instance Applicative action => Applicative (Form action view field error) where
 -- autocomplete purposes.
 data FieldName index where
   DynamicFieldName :: FieldName index
-  StaticFieldName
-    :: (NameStatus index ~ 'FieldNamesNeedVerification) => Text -> FieldName index
+  StaticFieldName :: Text -> FieldName 'Unverified
 
 --------------------------------------------------------------------------------
--- $type-families
+-- $type-classes
 --
--- Type families used by the form type.
+-- Type classes used by the form type.
 
--- | The status of verification of invariants in the form.
-class FormVerification index where
-  type NameStatus index :: FieldNameStatus
-
--- | Whether field names need to be checked statically for extra
--- invariants.
-data FieldNameStatus
-  = FieldNamesNeedVerification
-    -- ^ The form has to be checked before it can be run. This is what
-    -- happens when you use custom field names.
-  | FieldNamesOk
-    -- ^ No check has to be performed on the form. This is the typical case.
+-- | Index of the form AST.
+data FormIndex
+  = Verified
+  | Unverified
 
 -- | The type of field used in the form.
 class FormField view field error where
@@ -154,9 +145,9 @@ class FormError error where
 -- together. This type represents that coupling.
 
 -- | The generated view and value of a form.
-data Generated action view error a =
+data Generated view error a =
   Generated
-    { generatedView :: !(action view)
+    { generatedView :: !view
       -- ^ The view for the page to display.
     , generatedValue :: !(Validation [error] a)
       -- ^ Either a successful result, or else a list of (possibly
@@ -164,16 +155,16 @@ data Generated action view error a =
     }
 
 -- | Map over the result value.
-deriving instance Functor (Generated action view field)
-deriving instance Traversable (Generated action view field)
-deriving instance Foldable (Generated action view field)
+deriving instance Functor (Generated view field)
+deriving instance Traversable (Generated view field)
+deriving instance Foldable (Generated view field)
 
 -- | Combine the results.
-instance (Monoid view, Applicative action) => Applicative (Generated action view field) where
-  pure x = Generated {generatedView = pure mempty, generatedValue = pure x}
+instance (Monoid view) => Applicative (Generated view field) where
+  pure x = Generated {generatedView = mempty, generatedValue = pure x}
   (<*>) x y =
     Generated
-      { generatedView = (<>) <$> generatedView x <*> generatedView y
+      { generatedView = generatedView x <> generatedView y
       , generatedValue = generatedValue x <*> generatedValue y
       }
 
@@ -194,6 +185,8 @@ data Path
   | InApLeft !Path
   | InApRight !Path
   | InParse !Path
+  | InCeiling !Path
+  | InFloor !Path
   | PathEnd
   deriving (Show, Eq, Ord)
 
