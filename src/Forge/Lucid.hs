@@ -46,7 +46,7 @@ instance Forge.FormError Error where
   invalidInputFormat = InvalidInputFormat
 
 -- | Instantiation of the standard Html5 fields.
-instance Forge.FormField (Lucid.Html ()) Field Error where
+instance (Forge.FormError error) => Forge.FormField (Lucid.Html ()) Field error where
   parseFieldInput key field input =
     case field of
       TextField ->

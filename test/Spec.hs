@@ -5,6 +5,7 @@
 
 import           Data.Functor.Identity
 import qualified Data.Map.Strict as M
+import           Data.Text (Text)
 import           Data.Validation
 import           Forge.Generate
 import           Forge.Internal.Types
@@ -12,6 +13,13 @@ import           Forge.Lucid
 import           Forge.Verify
 import           Lucid
 import           Test.Hspec
+
+data MyError
+  = PasswordsMismatch Text Text
+  | LucidError Error
+instance FormError MyError where
+  missingInputError = LucidError . missingInputError
+  invalidInputFormat k = LucidError . invalidInputFormat k
 
 main :: IO ()
 main =
@@ -165,32 +173,52 @@ main =
                             @Identity
                             @(Html ())
                             @Field
-                            @Error
-                            (M.singleton "/p/f/" (TextInput "1"))
+                            @MyError
+                            (M.fromList
+                               [ ("/p/l/m/f/e/", (TextInput "letmein"))
+                               , ("/p/r/f/e/", (TextInput "letmein!"))
+                               ])
                             (verified
                                (ParseForm
-                                  (\i ->
+                                  (\(a, b) ->
                                      pure
-                                       (if i > 5
-                                          then Right (i * 2)
-                                          else Left
-                                                 (InvalidInputFormat
-                                                    "/wibble"
-                                                    (FileInput ""))))
-                                  (FloorForm
-                                     (\merr v ->
-                                        ( v <>
-                                          case merr of
-                                            Nothing -> mempty
-                                            Just err ->
-                                              case err of
-                                                InvalidInputFormat {} ->
-                                                  p_ "invalid input format"
-                                                MissingInput {} ->
-                                                  p_ "missing input!"
-                                        , Nothing))
-                                     (FieldForm DynamicFieldName IntegerField))))))))
-                "<input name=\"/p/f/\" type=\"number\"><p>invalid input format</p>")
+                                       (if a == b
+                                          then Right a
+                                          else Left (PasswordsMismatch a b)))
+                                  (let flooring =
+                                         FloorForm
+                                           (\merr v ->
+                                              ( v <>
+                                                case merr of
+                                                  Nothing -> mempty
+                                                  Just err ->
+                                                    case err of
+                                                      PasswordsMismatch _ _ ->
+                                                        p_
+                                                          "passwords do not match"
+                                                      LucidError er ->
+                                                        case er of
+                                                          InvalidInputFormat {} ->
+                                                            li_
+                                                              "invalid input format"
+                                                          MissingInput {} ->
+                                                            li_ "missing input!"
+                                              , Nothing))
+                                    in (((,) <$>
+                                         flooring
+                                           (MapErrorForm
+                                              LucidError
+                                              (FieldForm
+                                                 DynamicFieldName
+                                                 TextField)) <*>
+                                         flooring
+                                           (MapErrorForm
+                                              LucidError
+                                              (FieldForm
+                                                 DynamicFieldName
+                                                 TextField)))))))))))
+                "<input name=\"/p/l/m/f/e/\"><p>passwords do not match</p>\
+                \<input name=\"/p/r/f/e/\"><p>passwords do not match</p>")
            it
              "Ceiling"
              (shouldBe

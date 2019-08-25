@@ -42,14 +42,22 @@ generate ::
 generate inputs = go PathBegin . unVerifiedForm
   where
     go ::
-         forall x.
-         (Path -> Path)
-      -> Form index parse view field error x
-      -> parse (Generated view error x)
+         forall x err. (FormError err, FormField view field err)
+      => (Path -> Path)
+      -> Form index parse view field err x
+      -> parse (Generated view err x)
     go path =
       \case
         ValueForm m -> pure (pure m)
         MapValueForm f form -> fmap (fmap f) (go (path . InMapValue) form)
+        MapErrorForm f form ->
+          fmap
+            (\gen ->
+               Generated
+                 { generatedView = generatedView gen
+                 , generatedValue = first (fmap f) (generatedValue gen)
+                 })
+            (go (path . InMapError) form)
         ApValueForm f x ->
           (<*>) <$> go (path . InApLeft) f <*> go (path . InApRight) x
         ViewForm m -> pure (pureView m)
@@ -59,7 +67,7 @@ generate inputs = go PathBegin . unVerifiedForm
                 case name of
                   DynamicFieldName -> pathToKey (path PathEnd)
                   StaticFieldName text -> Key text
-              generatedView = viewField @view @field @error key field
+              generatedView = viewField @view @field @err key field
           case M.lookup key inputs of
             Nothing ->
               pure
@@ -68,7 +76,7 @@ generate inputs = go PathBegin . unVerifiedForm
                    , generatedView
                    })
             Just input ->
-              case parseFieldInput @view @field @error key field input of
+              case parseFieldInput @view @field @err key field input of
                 Left errorIndexed ->
                   pure
                     (Generated
@@ -106,7 +114,7 @@ generate inputs = go PathBegin . unVerifiedForm
                { generatedView = generatedView'
                , generatedValue = first (const errs') (generatedValue generated)
                })
-    pureView :: view -> Generated view error ()
+    pureView :: forall e. view -> Generated view e ()
     pureView v = Generated {generatedView = v, generatedValue = pure ()}
 
 -- | Convert a path to a rendered key.
@@ -122,6 +130,7 @@ pathToKey = Key . go
         InParse path -> "p/" <> go path
         InCeiling path -> "c/" <> go path
         InFloor path -> "f/" <> go path
+        InMapError path -> "e/" <> go path
         PathEnd -> ""
 
 -- | View a form in the given parse context.
@@ -148,14 +157,18 @@ viewWithError ::
 viewWithError = go
   where
     go ::
-         forall x.
-         Maybe error
+         forall x err.
+         Maybe err
       -> (Path -> Path)
-      -> Form index parse view field error x
+      -> Form index parse view field err x
       -> view
     go errs path =
       \case
         ValueForm _ -> mempty
+        -- When we hit a map over the error, that means what is below
+        -- cannot by the type system even access what's
+        -- above. Therefore this forms a lower boundary.
+        MapErrorForm _ form -> go Nothing (path . InMapError) form
         MapValueForm _ form -> go errs (path . InMapValue) form
         CeilingForm _ form -> go errs (path . InCeiling) form
         ApValueForm f x ->

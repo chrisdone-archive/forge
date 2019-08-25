@@ -68,6 +68,12 @@ data Form index (parse :: * -> *) view (field :: * -> *) error a where
     :: (a -> b)
     -> Form index parse view field error a
     -> Form index parse view field error b
+  -- | Map over the error type.
+  MapErrorForm
+    :: (FormError errorA, FormField view field errorA)
+    => (errorA -> errorB)
+    -> Form index parse view field errorA a
+    -> Form index parse view field errorB a
   -- | Applicative application of a function to a value. Notice that
   -- this mirrors '<*>' or 'ap'.
   ApValueForm
@@ -182,6 +188,7 @@ newtype Key =
 data Path
   = PathBegin !Path
   | InMapValue !Path
+  | InMapError !Path
   | InApLeft !Path
   | InApRight !Path
   | InParse !Path
