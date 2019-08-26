@@ -21,6 +21,7 @@ source-repository head
 library
   ghc-options: -Wall
   exposed-modules:
+      Forge
       Forge.Generate
       Forge.Types
       Forge.Lucid

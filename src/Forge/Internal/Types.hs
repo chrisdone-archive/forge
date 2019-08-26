@@ -39,12 +39,6 @@ import Data.String
 import Data.Text (Text)
 import Data.Validation
 
---------------------------------------------------------------------------------
--- $form-type
---
--- The main form type used in this package.
---
-
 -- | A form indexed by some type @index@ (a phantom type), returning a
 -- value @a@.
 --
@@ -106,6 +100,7 @@ data Form index (parse :: * -> *) view (field :: * -> *) error a where
     -> Form index parse view field error a
     -> Form index parse view field error a
 
+-- | Map over the value of the form.
 instance Functor (Form index parse view field error) where
   fmap = MapValueForm
 
@@ -117,7 +112,9 @@ instance Applicative (Form index parse view field error) where
 --------------------------------------------------------------------------------
 -- Field names
 
--- | Name for a field. Either dynamic (more typical), or statically
+-- | Name for a field.
+--
+-- Either dynamic (more typical), or statically
 -- determined (such as a username/password) for browser-based
 -- autocomplete purposes.
 data FieldName index where
@@ -160,9 +157,13 @@ data Generated view error a =
       -- empty) errors.
     }
 
+-- | Structural equality.
+deriving instance (Eq view, Eq field, Eq a) => Eq (Generated view field a)
 -- | Map over the result value.
 deriving instance Functor (Generated view field)
+-- | Traverse over the value.
 deriving instance Traversable (Generated view field)
+-- | Fold over the value.
 deriving instance Foldable (Generated view field)
 
 -- | Combine the results.

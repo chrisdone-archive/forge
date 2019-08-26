@@ -17,11 +17,18 @@ import           Test.Hspec
 data MyError
   = PasswordsMismatch Text Text
   | LucidError Error
+
+data MyError2
+  = LucidError2 Error
   | NumberTooLow Integer
 
 instance FormError MyError where
   missingInputError = LucidError . missingInputError
   invalidInputFormat k = LucidError . invalidInputFormat k
+
+instance FormError MyError2 where
+  missingInputError = LucidError2 . missingInputError
+  invalidInputFormat k = LucidError2 . invalidInputFormat k
 
 main :: IO ()
 main =
@@ -198,8 +205,6 @@ main =
                                                       PasswordsMismatch _ _ ->
                                                         p_
                                                           "passwords do not match"
-                                                      NumberTooLow _ ->
-                                                        p_ "number too low!"
                                                       LucidError er ->
                                                         case er of
                                                           InvalidInputFormat {} ->
@@ -234,7 +239,7 @@ main =
                             @Identity
                             @(Html ())
                             @Field
-                            @MyError
+                            @MyError2
                             (M.singleton "/c/p/e/" (TextInput "1"))
                             (verified
                                (CeilingForm
@@ -244,12 +249,9 @@ main =
                                          (mapM_
                                             (\err ->
                                                case err of
-                                                 PasswordsMismatch _ _ ->
-                                                   li_
-                                                     "passwords do not match"
                                                  NumberTooLow _ ->
                                                    li_ "number too low!"
-                                                 LucidError er ->
+                                                 LucidError2 er ->
                                                    case er of
                                                      InvalidInputFormat {} ->
                                                        li_
@@ -265,7 +267,7 @@ main =
                                              then Right (i * 2)
                                              else Left (NumberTooLow i)))
                                      (MapErrorForm
-                                        LucidError
+                                        LucidError2
                                         (FieldForm DynamicFieldName IntegerField)))))))))
                 "<input name=\"/c/p/e/\" type=\"number\"><ul><li>number too low!</li></ul>")
            it

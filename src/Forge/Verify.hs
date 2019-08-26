@@ -12,15 +12,23 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE LambdaCase #-}
 
--- | Verifying invariants of a form.
+-- | Easy functions for verifying invariants of a form. See
+-- 'VerificationResult' for the kind of checks that are run.
 
 module Forge.Verify
-  ( verified
-  , VerifiedForm
-  , unVerifiedForm
+  ( -- * Static Verification
+    -- $static-verification
+    verified
   , verify
-  , runVerification
+    -- * Dynamic verification
+    -- $dynamic-verification
   , maybeVerify
+  , VerifiedForm
+   -- * Unwrapping verification
+  , unVerifiedForm
+  -- * Running the verifier (for test suites)
+  , runVerification
+  , VerificationResult(..)
   ) where
 
 import           Control.Monad.State.Strict
@@ -34,6 +42,12 @@ import           Language.Haskell.TH.Instances ()
 import           Language.Haskell.TH.Lift ()
 import           Language.Haskell.TH.Syntax hiding (lift)
 
+-- $static-verification
+-- Verify invariants about the form at compile-time. Choose this method preferably.
+
+-- $dynamic-verification
+-- This can be helpful if your form is generated from runtime inputs.
+
 -- | Verification result of a form.
 data VerificationResult
   = VerifiedResult
@@ -44,28 +58,47 @@ data VerificationResult
 newtype VerifiedForm index parse view field error a =
   VerifiedForm
     { unVerifiedForm :: Form index parse view field error a
+      -- ^ Unwrap a form from the proof that it was verified.
     }
 
 -- | A form whose invariants are verified in the type system can be
 -- immediately converted to a verified form.
 verified ::
      Form 'Verified parse view field error a
+     -- ^ A form which is already verified carries the proof.
   -> VerifiedForm 'Verified parse view field error a
+  -- ^ A wrapped version of the form.
 verified = VerifiedForm
 
--- | Smart constructor.
+-- | Smart constructor: verify the form at runtime.
 maybeVerify ::
      Form index parse view field error a
+     -- ^ A form which may be verifiable.
   -> Maybe (VerifiedForm index parse view field error a)
+  -- ^ Maybe the verified form, or else nothing.
 maybeVerify frm =
   case runVerification frm of
     VerifiedResult -> Just (VerifiedForm frm)
     _ -> Nothing
 
--- | Verify a form that needs verification.
+-- | Verify a form that needs verification at compile-time. Example:
+--
+-- @
+-- '$$'($$(verify [|| myform ||]))
+-- @
 verify ::
      Q (TExp (Form index parse view field error a))
+     -- ^ A typed quoted expression representing the form, e.g.
+     --
+     -- @
+     -- [|| myform ||]
+     -- @
   -> Q (TExp (Q (TExp (VerifiedForm index parse view field error a))))
+  -- ^ Two layers of expression generators. Unpack it via
+  --
+  -- @
+  -- '$$'($$(..))
+  -- @
 verify q = do
   TExp expr <- q
   [|| case runVerification $$(q) of

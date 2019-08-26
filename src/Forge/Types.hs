@@ -3,6 +3,11 @@
 
 module Forge.Types
   ( Form
+  , FormError
+  , FormIndex(..)
+  , FormField
+  , Generated
+  , Input(..)
   ) where
 
 import Forge.Internal.Types
