@@ -69,7 +69,7 @@ data Form index (parse :: * -> *) view (field :: * -> *) error a where
     -> Form index parse view field errorA a
     -> Form index parse view field errorB a
   -- | Applicative application of a function to a value. Notice that
-  -- this mirrors '<*>' or 'ap'.
+  -- this mirrors '<*>' or 'Control.Monad.ap'.
   ApValueForm
     :: Form index parse view field error (a -> b)
     -> Form index parse view field error a
