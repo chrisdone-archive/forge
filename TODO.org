@@ -1,6 +1,38 @@
-* Use applicative regex + pattern= to enable additional client-side
+* TODO Defaults for inputs
+  - Note taken on [2019-09-14 Sat 23:42] \\
+    TextField :: Maybe Text -> Form index parse view field error Text
+* TODO Repeated forms ("many")
+  - Note taken on [2019-09-14 Sat 23:35] \\
+    Something like:
+
+    Repeated
+      :: (Remove view -> Form index parse view field error a)
+      -> (Add view -> view -> view)
+      -> Form index parse view field error [a]
+
+    A minimum/max can be set via a wrapper parser (ParseForm).
+
+    data Remove view = Remove {
+      delete :: view
+      -- ^ View that displays some kind of delete button.
+    }
+
+    data Add view = Add {
+      delete :: view
+      -- ^ View that displays some kind of delete button.
+    }
+* TODO Use applicative regex + pattern= to enable additional client-side
+  - Note taken on [2019-09-14 Sat 23:33] \\
+    Discussion:
+    https://github.com/feuerbach/regex-applicative/issues/36
   checks:
   https://www.w3schools.com/tags/att_input_pattern.asp
+* TODO Additional attributes?
+** Step, min/max, etc:
+   https://html.com/attributes/input-autocomplete/#All_Attributes_of_input_Element
+** Autofocus?
+** Autocomplete attr?
+** Disabled?
 * CANCELED Autocomplete? IDEA: rather than specifying field names in the form
   CLOSED: [2019-08-23 Fri 12:40]
   - State "CANCELED"   from ""           [2019-08-23 Fri 12:40]
@@ -8,8 +40,3 @@
   inherently non-compositional, but a rewrite for the purposes of
   browser completion ain't bad. Or something else, as a separate pass,
   with hints.
-* Step, min/max, etc:
-  https://html.com/attributes/input-autocomplete/#All_Attributes_of_input_Element
-* Autofocus?
-* Autocomplete attr?
-* Disabled?
