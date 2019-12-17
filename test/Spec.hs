@@ -50,32 +50,54 @@ main =
                          ((,) <$> FieldForm DynamicFieldName IntegerField <*>
                           FieldForm DynamicFieldName TextField))))
                 "<input name=\"/l/m/\" type=\"number\"><input name=\"/r/\">")
-           it
-             "Sequence"
-             (shouldBe
-                (renderText
-                   (view
-                      @'Verified
-                      @_
-                      @(Html ())
-                      @Field
-                      @Error
-                      (verified
-                         ((,) <$>
-                          traverse
-                            (const (FieldForm DynamicFieldName IntegerField))
-                            [1 :: Int .. 9] <*>
-                          FieldForm DynamicFieldName TextField))))
-                "<input name=\"/l/m/l/m/\" type=\"number\">\
-                \<input name=\"/l/m/r/l/m/\" type=\"number\">\
-                \<input name=\"/l/m/r/r/l/m/\" type=\"number\">\
-                \<input name=\"/l/m/r/r/r/l/m/\" type=\"number\">\
-                \<input name=\"/l/m/r/r/r/r/l/m/\" type=\"number\">\
-                \<input name=\"/l/m/r/r/r/r/r/l/m/\" type=\"number\">\
-                \<input name=\"/l/m/r/r/r/r/r/r/l/m/\" type=\"number\">\
-                \<input name=\"/l/m/r/r/r/r/r/r/r/l/m/\" type=\"number\">\
-                \<input name=\"/l/m/r/r/r/r/r/r/r/r/l/m/\" type=\"number\">\
-                \<input name=\"/r/\">")
+           describe
+             "Name stability"
+             (do it
+                   "Sequence 1"
+                   (shouldBe
+                      (renderText
+                         (view
+                            @'Verified
+                            @_
+                            @(Html ())
+                            @Field
+                            @Error
+                            (verified
+                               ((,) <$>
+                                traverse
+                                  (const
+                                     (FieldForm DynamicFieldName IntegerField))
+                                  [1 :: Int .. 1] <*>
+                                FieldForm DynamicFieldName TextField))))
+                      "<input name=\"/l/m/l/m/\" type=\"number\">\
+                      \<input name=\"/r/\">")
+                 it
+                   "Sequence 9"
+                   (shouldBe
+                      (renderText
+                         (view
+                            @'Verified
+                            @_
+                            @(Html ())
+                            @Field
+                            @Error
+                            (verified
+                               ((,) <$>
+                                traverse
+                                  (const
+                                     (FieldForm DynamicFieldName IntegerField))
+                                  [1 :: Int .. 9] <*>
+                                FieldForm DynamicFieldName TextField))))
+                      "<input name=\"/l/m/l/m/\" type=\"number\">\
+                      \<input name=\"/l/m/r/l/m/\" type=\"number\">\
+                      \<input name=\"/l/m/r/r/l/m/\" type=\"number\">\
+                      \<input name=\"/l/m/r/r/r/l/m/\" type=\"number\">\
+                      \<input name=\"/l/m/r/r/r/r/l/m/\" type=\"number\">\
+                      \<input name=\"/l/m/r/r/r/r/r/l/m/\" type=\"number\">\
+                      \<input name=\"/l/m/r/r/r/r/r/r/l/m/\" type=\"number\">\
+                      \<input name=\"/l/m/r/r/r/r/r/r/r/l/m/\" type=\"number\">\
+                      \<input name=\"/l/m/r/r/r/r/r/r/r/r/l/m/\" type=\"number\">\
+                      \<input name=\"/r/\">"))
            it
              "Input parsing"
              (shouldBe
