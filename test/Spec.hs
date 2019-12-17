@@ -64,11 +64,17 @@ main =
                          ((,) <$>
                           traverse
                             (const (FieldForm DynamicFieldName IntegerField))
-                            [1 :: Int .. 3] <*>
+                            [1 :: Int .. 9] <*>
                           FieldForm DynamicFieldName TextField))))
                 "<input name=\"/l/m/l/m/\" type=\"number\">\
                 \<input name=\"/l/m/r/l/m/\" type=\"number\">\
                 \<input name=\"/l/m/r/r/l/m/\" type=\"number\">\
+                \<input name=\"/l/m/r/r/r/l/m/\" type=\"number\">\
+                \<input name=\"/l/m/r/r/r/r/l/m/\" type=\"number\">\
+                \<input name=\"/l/m/r/r/r/r/r/l/m/\" type=\"number\">\
+                \<input name=\"/l/m/r/r/r/r/r/r/l/m/\" type=\"number\">\
+                \<input name=\"/l/m/r/r/r/r/r/r/r/l/m/\" type=\"number\">\
+                \<input name=\"/l/m/r/r/r/r/r/r/r/r/l/m/\" type=\"number\">\
                 \<input name=\"/r/\">")
            it
              "Input parsing"
