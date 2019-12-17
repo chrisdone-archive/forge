@@ -100,6 +100,10 @@ data Form index (parse :: * -> *) view (field :: * -> *) error a where
     -> Form index parse view field error a
     -> Form index parse view field error a
 
+instance (a ~ (), IsString view) =>
+         IsString (Form index parse view field error a) where
+  fromString = ViewForm . fromString
+
 -- | Map over the value of the form.
 instance Functor (Form index parse view field error) where
   fmap = MapValueForm
