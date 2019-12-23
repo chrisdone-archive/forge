@@ -223,8 +223,7 @@ floor =
                                   (MapErrorForm
                                      LucidError
                                      (FieldForm DynamicFieldName TextField)))))))))))
-       "<input name=\"/p/l/m/f/e/\"><p>passwords do not match</p>\
-             \<input name=\"/p/r/f/e/\"><p>passwords do not match</p>")
+       "<input value=\"letmein\" name=\"/p/l/m/f/e/\"><p>passwords do not match</p><input value=\"letmein!\" name=\"/p/r/f/e/\"><p>passwords do not match</p>")
 
 parseFail :: Spec
 parseFail =
@@ -291,7 +290,7 @@ ceiling =
                             (MapErrorForm
                                LucidError2
                                (FieldForm DynamicFieldName IntegerField)))))))))
-       "<input name=\"/c/p/e/\" type=\"number\"><ul><li>number too low!</li></ul>")
+       "<input value=\"1\" name=\"/c/p/e/\" type=\"number\"><ul><li>number too low!</li></ul>")
 
 nameStability :: Spec
 nameStability =
