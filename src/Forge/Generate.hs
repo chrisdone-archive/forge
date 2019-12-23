@@ -67,8 +67,9 @@ generate inputs = go PathBegin . unVerifiedForm
                 case name of
                   DynamicFieldName -> pathToKey (path PathEnd)
                   StaticFieldName text -> Key text
-              generatedView = viewField @view @field @err key field
-          case M.lookup key inputs of
+              minput = M.lookup key inputs
+              generatedView = viewField @view @field @err key minput field
+          case minput of
             Nothing ->
               pure
                 (Generated
@@ -174,7 +175,7 @@ viewWithError = go
         ApValueForm f x ->
           go errs (path . InApLeft) f <> go errs (path . InApRight) x
         ViewForm m -> m
-        FieldForm name m -> viewField @view @field @error key m
+        FieldForm name m -> viewField @view @field @error key Nothing m
           where key =
                   case name of
                     DynamicFieldName -> pathToKey (path PathEnd)

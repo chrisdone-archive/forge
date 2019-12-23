@@ -46,7 +46,8 @@ instance Forge.FormError Error where
   invalidInputFormat = InvalidInputFormat
 
 -- | Instantiation of the standard Html5 fields.
-instance (Forge.FormError error) => Forge.FormField (Lucid.Html ()) Field error where
+instance (Forge.FormError error) =>
+         Forge.FormField (Lucid.Html ()) Field error where
   parseFieldInput key field input =
     case field of
       TextField ->
@@ -60,8 +61,13 @@ instance (Forge.FormError error) => Forge.FormField (Lucid.Html ()) Field error 
             case readMaybe (T.unpack text) of
               Just i -> pure i
               Nothing -> Left (Forge.invalidInputFormat key input)
-  viewField key =
+  viewField key minput =
     \case
-      TextField -> Lucid.input_ [Lucid.name_ (Forge.unKey key)]
+      TextField ->
+        Lucid.input_
+          ([Lucid.name_ (Forge.unKey key)] <>
+           [Lucid.value_ value | Just (Forge.TextInput value) <- [minput]])
       IntegerField ->
-        Lucid.input_ [Lucid.name_ (Forge.unKey key), Lucid.type_ "number"]
+        Lucid.input_
+          ([Lucid.name_ (Forge.unKey key), Lucid.type_ "number"] <>
+           [Lucid.value_ value | Just (Forge.TextInput value) <- [minput]])

@@ -138,7 +138,7 @@ data FormIndex
 -- | The type of field used in the form.
 class FormField view field error where
   parseFieldInput :: FormError error => Key -> field a -> Input -> Either error a
-  viewField :: Key -> field a -> view
+  viewField :: Key -> Maybe Input -> field a -> view
 
 -- | The error type of the form.
 class FormError error where
