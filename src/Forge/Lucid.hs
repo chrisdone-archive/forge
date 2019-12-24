@@ -97,7 +97,7 @@ instance (Forge.FormError error) =>
            [Lucid.value_ value | Just (Forge.TextInput value :| []) <- [minput]])
       MultiselectField choices ->
         Lucid.select_
-          [Lucid.name_ (Forge.unKey key)]
+          [Lucid.name_ (Forge.unKey key), Lucid.multiple_ "multiple"]
           (mapM_
              (\(i, (_, k)) ->
                 Lucid.option_ [Lucid.value_ (uniqueKey i k)] (Lucid.toHtml k))
