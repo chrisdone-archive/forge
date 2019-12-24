@@ -17,7 +17,9 @@ module Forge.Lucid
   , Field(..)
   ) where
 
+import           Data.Foldable
 import           Data.List.NonEmpty (NonEmpty(..))
+import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Forge.Internal.Types as Forge
@@ -31,12 +33,14 @@ import           Text.Read (readMaybe)
 data Error
   = MissingInput Forge.Key
   | InvalidInputFormat Forge.Key (NonEmpty Forge.Input)
+  | InvalidMultiselectKey Text
   deriving (Show, Eq)
 
 -- | A standard Html5 field.
 data Field a where
   TextField :: Field Text
   IntegerField :: Field Integer
+  MultiselectField :: NonEmpty (a, Text) -> Field [a]
 
 --------------------------------------------------------------------------------
 -- Instantiation of classes
@@ -62,6 +66,25 @@ instance (Forge.FormError error) =>
               Just i -> pure i
               Nothing -> Left (Forge.invalidInputFormat key input)
           _ -> Left (Forge.invalidInputFormat key input)
+      MultiselectField choices -> do
+        keys <-
+          mapM
+            (\case
+               (Forge.TextInput text) -> Right text
+               _ -> Left (Forge.invalidInputFormat key input))
+            input
+        values <-
+          mapM
+            (\k ->
+               case lookup k keyedChoices of
+                 Nothing -> Left (Forge.invalidInputFormat key input)
+                 Just ok -> pure ok)
+            keys
+        pure (toList values)
+        where keyedChoices =
+                map
+                  (\(i, (value, title)) -> (uniqueKey i title, value))
+                  (zip [0 :: Integer ..] (toList choices))
   viewField key minput =
     \case
       TextField ->
@@ -72,3 +95,14 @@ instance (Forge.FormError error) =>
         Lucid.input_
           ([Lucid.name_ (Forge.unKey key), Lucid.type_ "number"] <>
            [Lucid.value_ value | Just (Forge.TextInput value :| []) <- [minput]])
+      MultiselectField choices ->
+        Lucid.select_
+          [Lucid.name_ (Forge.unKey key)]
+          (mapM_
+             (\(i, (_, k)) ->
+                Lucid.option_ [Lucid.value_ (uniqueKey i k)] (Lucid.toHtml k))
+             (zip [0 :: Integer ..] (toList choices)))
+
+-- | A key which is unique with respect to a list index and its display.
+uniqueKey :: Integer -> Text -> Text
+uniqueKey i title = fromString (show i) <> ":" <> title
