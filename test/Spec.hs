@@ -402,6 +402,32 @@ multiples =
                       , MissingInput (Key {unKey = "/i/2/l/m/"})
                       , MissingInput (Key {unKey = "/i/2/r/"})
                       ]
+                }))
+        it
+          "Fully satisfied inputs"
+          (shouldBe
+             ((\Generated {generatedView, generatedValue} ->
+                 Generated
+                   {generatedValue, generatedView = renderText generatedView})
+                (runIdentity
+                   (generate
+                      @'Verified
+                      @Identity
+                      @(Html ())
+                      @Field
+                      @Error
+                      (M.fromList
+                         [ ("/s/m/", TextInput "2")
+                         , ("/i/1/l/m/", TextInput "666")
+                         , ("/i/1/r/", TextInput "Hello!")
+                         , ("/i/2/l/m/", TextInput "123")
+                         , ("/i/2/r/", TextInput "World!")
+                         ])
+                      basicNumericState)))
+             (Generated
+                { generatedView =
+                    "<input value=\"2\" name=\"/s/m/\" type=\"number\"><input value=\"666\" name=\"/i/1/l/m/\" type=\"number\"><input value=\"Hello!\" name=\"/i/1/r/\"><input value=\"123\" name=\"/i/2/l/m/\" type=\"number\"><input value=\"World!\" name=\"/i/2/r/\">"
+                , generatedValue = Success [(666, "Hello!"), (123, "World!")]
                 })))
   where
     basicNumericState =
@@ -410,6 +436,10 @@ multiples =
            (\setView views -> setView <> mconcat views)
            (fmap
               (Set.fromList . enumFromTo 1)
+              -- Above: We generate an ordered list here. However:
+              -- this input could be a TextField producing an
+              -- [Integer] value, thereby allowing the client-side to
+              -- delete with random access, or re-order formlets, etc.
               (FieldForm DynamicFieldName IntegerField))
            ((,) <$> FieldForm DynamicFieldName IntegerField <*>
             FieldForm DynamicFieldName TextField))
