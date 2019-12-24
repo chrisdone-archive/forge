@@ -196,7 +196,7 @@ viewWithError inputs = go
           viewTransformer (go errs (path . InManySet) setForm) []
         MapErrorForm _ form -> go Nothing (path . InMapError) form
         MapValueForm _ form -> go errs (path . InMapValue) form
-        CeilingForm _ form -> go errs (path . InCeiling) form
+        CeilingForm f form -> fst (f [] (go errs (path . InCeiling) form))
         ApValueForm f x ->
           go errs (path . InApLeft) f <> go errs (path . InApRight) x
         ViewForm m -> m

@@ -426,7 +426,11 @@ multiples =
                       basicNumericState)))
              (Generated
                 { generatedView =
-                    "<input value=\"2\" name=\"/s/m/\" type=\"number\"><input value=\"666\" name=\"/i/1/l/m/\" type=\"number\"><input value=\"Hello!\" name=\"/i/1/r/\"><input value=\"123\" name=\"/i/2/l/m/\" type=\"number\"><input value=\"World!\" name=\"/i/2/r/\">"
+                    "<input value=\"2\" name=\"/s/m/\" type=\"number\">\
+                    \<input value=\"666\" name=\"/i/1/l/m/\" type=\"number\">\
+                    \<input value=\"Hello!\" name=\"/i/1/r/\">\
+                    \<input value=\"123\" name=\"/i/2/l/m/\" type=\"number\">\
+                    \<input value=\"World!\" name=\"/i/2/r/\">"
                 , generatedValue = Success [(666, "Hello!"), (123, "World!")]
                 })))
   where
