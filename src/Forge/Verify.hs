@@ -117,6 +117,7 @@ runVerification =
       -> StateT (Set Text) (Either Text) ()
     go =
       \case
+        ManyForm _ f1 f2 -> go f1 *> go f2
         ValueForm {} -> pure ()
         MapValueForm _ f -> go f
         MapErrorForm _ f -> go f

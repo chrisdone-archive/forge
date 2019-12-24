@@ -25,6 +25,8 @@ module Forge.Generate
 import           Data.Bifunctor
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import qualified Data.Set as Set
+import           Data.String
 import           Data.Validation
 import           Forge.Internal.Types
 import           Forge.Verify
@@ -115,6 +117,23 @@ generate inputs = go PathBegin . unVerifiedForm
                { generatedView = generatedView'
                , generatedValue = first (const errs') (generatedValue generated)
                })
+        ManyForm viewTransformer setForm itemForm -> do
+          setGenerated <- go (path . InManySet) setForm
+          case setGenerated of
+            Generated {generatedValue = Success set, generatedView = setView} -> do
+              generateds <-
+                traverse
+                  (\idx -> go (path . InManyIndex idx) itemForm)
+                  (Set.toList set)
+              let totalGenerated = sequenceA generateds
+              pure
+                Generated
+                  { generatedValue = generatedValue totalGenerated
+                  , generatedView =
+                      viewTransformer setView (map generatedView generateds)
+                  }
+            Generated {generatedValue = Failure err} ->
+              pure setGenerated {generatedValue = Failure err}
     pureView :: forall e. view -> Generated view e ()
     pureView v = Generated {generatedView = v, generatedValue = pure ()}
 
@@ -132,6 +151,8 @@ pathToKey = Key . go
         InCeiling path -> "c/" <> go path
         InFloor path -> "f/" <> go path
         InMapError path -> "e/" <> go path
+        InManySet path -> "s/" <> go path
+        InManyIndex idx path -> "i/" <> fromString (show idx) <> "/" <> go path
         PathEnd -> ""
 
 -- | View a form in the given parse context.
@@ -171,6 +192,8 @@ viewWithError inputs = go
         -- When we hit a map over the error, that means what is below
         -- cannot by the type system even access what's
         -- above. Therefore this forms a lower boundary.
+        ManyForm viewTransformer setForm _ ->
+          viewTransformer (go errs (path . InManySet) setForm) []
         MapErrorForm _ form -> go Nothing (path . InMapError) form
         MapValueForm _ form -> go errs (path . InMapValue) form
         CeilingForm _ form -> go errs (path . InCeiling) form

@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -7,6 +8,7 @@ module Main (main) where
 
 import           Data.Functor.Identity
 import qualified Data.Map.Strict as M
+import qualified Data.Set as Set
 import           Data.Text (Text)
 import           Data.Validation
 import           Forge.Generate
@@ -45,7 +47,8 @@ main =
            nameStability
            floor
            ceiling
-           parseFail))
+           parseFail
+           multiples))
 
 thTests :: Spec
 thTests =
@@ -359,3 +362,54 @@ simpleView =
                 ((,) <$> FieldForm DynamicFieldName IntegerField <*>
                  FieldForm DynamicFieldName TextField))))
        "<input name=\"/l/m/\" type=\"number\"><input name=\"/r/\">")
+
+multiples :: Spec
+multiples =
+  describe
+    "Multiples"
+    (do it
+          "Empty"
+          (shouldBe
+             (renderText
+                (view @'Verified @_ @(Html ()) @Field @Error basicNumericState))
+             "<input name=\"/s/m/\" type=\"number\">")
+        it
+          "Missing input"
+          (shouldBe
+             ((\Generated {generatedView, generatedValue} ->
+                 Generated
+                   {generatedValue, generatedView = renderText generatedView})
+                (runIdentity
+                   (generate
+                      @'Verified
+                      @Identity
+                      @(Html ())
+                      @Field
+                      @Error
+                      (M.fromList [("/s/m/", TextInput "2")])
+                      basicNumericState)))
+             (Generated
+                { generatedView =
+                    mconcat
+                      [ "<input value=\"2\" name=\"/s/m/\" type=\"number\">" -- set
+                      , "<input name=\"/i/1/l/m/\" type=\"number\"><input name=\"/i/1/r/\">" -- 1
+                      , "<input name=\"/i/2/l/m/\" type=\"number\"><input name=\"/i/2/r/\">" -- 2
+                      ]
+                , generatedValue =
+                    Failure
+                      [ MissingInput (Key {unKey = "/i/1/l/m/"})
+                      , MissingInput (Key {unKey = "/i/1/r/"})
+                      , MissingInput (Key {unKey = "/i/2/l/m/"})
+                      , MissingInput (Key {unKey = "/i/2/r/"})
+                      ]
+                })))
+  where
+    basicNumericState =
+      verified
+        (ManyForm
+           (\setView views -> setView <> mconcat views)
+           (fmap
+              (Set.fromList . enumFromTo 1)
+              (FieldForm DynamicFieldName IntegerField))
+           ((,) <$> FieldForm DynamicFieldName IntegerField <*>
+            FieldForm DynamicFieldName TextField))

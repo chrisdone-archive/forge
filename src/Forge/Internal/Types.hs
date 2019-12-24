@@ -35,9 +35,10 @@ module Forge.Internal.Types
   , Path(..)
   ) where
 
-import Data.String
-import Data.Text (Text)
-import Data.Validation
+import           Data.Set (Set)
+import           Data.String
+import           Data.Text (Text)
+import           Data.Validation
 
 -- | A form indexed by some type @index@ (a phantom type), returning a
 -- value @a@.
@@ -99,6 +100,12 @@ data Form index (parse :: * -> *) view (field :: * -> *) error a where
     :: ([error] -> view -> (view, [error]))
     -> Form index parse view field error a
     -> Form index parse view field error a
+  -- | Many formlets.
+  ManyForm
+    :: (view -> [view] -> view) -- ^ The set's view, the items' views, and produce a final view.
+    -> Form index parse view field error (Set Integer) -- ^ The set.
+    -> Form index parse view field error a -- ^ An individual item formlet.
+    -> Form index parse view field error [a] -- ^ The final form.
 
 instance (a ~ (), IsString view) =>
          IsString (Form index parse view field error a) where
@@ -163,6 +170,8 @@ data Generated view error a =
 
 -- | Structural equality.
 deriving instance (Eq view, Eq field, Eq a) => Eq (Generated view field a)
+-- | Structural show.
+deriving instance (Show view, Show field, Show a) => Show (Generated view field a)
 -- | Map over the result value.
 deriving instance Functor (Generated view field)
 -- | Traverse over the value.
@@ -199,6 +208,8 @@ data Path
   | InParse !Path
   | InCeiling !Path
   | InFloor !Path
+  | InManySet !Path
+  | InManyIndex !Integer !Path
   | PathEnd
   deriving (Show, Eq, Ord)
 
