@@ -111,7 +111,7 @@ invalidInputs = do it
                                  @(Html ())
                                  @Field
                                  @Error
-                                 (M.singleton "/" (FileInput ""))
+                                 (M.singleton "/" (pure (FileInput "")))
                                  (verified
                                     (FieldForm DynamicFieldName IntegerField *>
                                      FieldForm DynamicFieldName TextField)))))
@@ -130,9 +130,9 @@ invalidInputs = do it
                                  @(Html ())
                                  @Field
                                  @Error
-                                 (M.singleton "/" (TextInput "x"))
+                                 (M.singleton "/" (pure (TextInput "x")))
                                  (verified (FieldForm DynamicFieldName IntegerField)))))
-                        (Failure [InvalidInputFormat "/" (TextInput "x")]))
+                        (Failure [InvalidInputFormat "/" (pure (TextInput "x"))]))
 
 inputParsing :: Spec
 inputParsing = do
@@ -147,7 +147,7 @@ inputParsing = do
                 @(Html ())
                 @Field
                 @Error
-                (M.singleton "/" (TextInput "5"))
+                (M.singleton "/" (pure (TextInput "5")))
                 (verified (FieldForm DynamicFieldName IntegerField)))))
        (Success 5))
   it
@@ -161,7 +161,7 @@ inputParsing = do
                 @(Html ())
                 @Field
                 @Error
-                (M.singleton "/p/" (TextInput "6"))
+                (M.singleton "/p/" (pure (TextInput "6")))
                 (verified
                    (ParseForm
                       (\i ->
@@ -171,7 +171,7 @@ inputParsing = do
                               else Left
                                      (InvalidInputFormat
                                         "/"
-                                        (FileInput ""))))
+                                        (pure (FileInput "")))))
                       (FieldForm DynamicFieldName IntegerField))))))
        (Success 12))
 
@@ -190,8 +190,8 @@ floor =
                    @Field
                    @MyError
                    (M.fromList
-                      [ ("/p/l/m/f/e/", (TextInput "letmein"))
-                      , ("/p/r/f/e/", (TextInput "letmein!"))
+                      [ ("/p/l/m/f/e/", (pure (TextInput "letmein")))
+                      , ("/p/r/f/e/", (pure (TextInput "letmein!")))
                       ])
                    (verified
                       (ParseForm
@@ -241,16 +241,16 @@ parseFail =
                 @(Html ())
                 @Field
                 @Error
-                (M.singleton "/p/" (TextInput "5"))
+                (M.singleton "/p/" (pure (TextInput "5")))
                 (verified
                    (ParseForm
                       (\i ->
                          pure
                            (if i > 5
                               then Right i
-                              else Left (InvalidInputFormat "/" (FileInput ""))))
+                              else Left (InvalidInputFormat "/" (pure (FileInput "")))))
                       (FieldForm DynamicFieldName IntegerField))))))
-       (Failure [InvalidInputFormat (Key {unKey = "/"}) (FileInput "")]))
+       (Failure [InvalidInputFormat (Key {unKey = "/"}) (pure (FileInput ""))]))
 
 ceiling :: Spec
 ceiling =
@@ -266,7 +266,7 @@ ceiling =
                    @(Html ())
                    @Field
                    @MyError2
-                   (M.singleton "/c/p/e/" (TextInput "1"))
+                   (M.singleton "/c/p/e/" (pure (TextInput "1")))
                    (verified
                       (CeilingForm
                          (\merr v ->
@@ -386,7 +386,7 @@ multiples =
                       @(Html ())
                       @Field
                       @Error
-                      (M.fromList [("/s/m/", TextInput "2")])
+                      (M.fromList [("/s/m/", pure (TextInput "2"))])
                       basicNumericState)))
              (Generated
                 { generatedView =
@@ -417,11 +417,11 @@ multiples =
                       @Field
                       @Error
                       (M.fromList
-                         [ ("/s/m/", TextInput "2")
-                         , ("/i/1/l/m/", TextInput "666")
-                         , ("/i/1/r/", TextInput "Hello!")
-                         , ("/i/2/l/m/", TextInput "123")
-                         , ("/i/2/r/", TextInput "World!")
+                         [ ("/s/m/", pure (TextInput "2"))
+                         , ("/i/1/l/m/", pure (TextInput "666"))
+                         , ("/i/1/r/", pure (TextInput "Hello!"))
+                         , ("/i/2/l/m/", pure (TextInput "123"))
+                         , ("/i/2/r/", pure (TextInput "World!"))
                          ])
                       basicNumericState)))
              (Generated

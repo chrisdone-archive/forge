@@ -35,6 +35,7 @@ module Forge.Internal.Types
   , Path(..)
   ) where
 
+import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.Set (Set)
 import           Data.String
 import           Data.Text (Text)
@@ -144,13 +145,13 @@ data FormIndex
 
 -- | The type of field used in the form.
 class FormField view field error where
-  parseFieldInput :: FormError error => Key -> field a -> Input -> Either error a
-  viewField :: Key -> Maybe Input -> field a -> view
+  parseFieldInput :: FormError error => Key -> field a -> NonEmpty Input -> Either error a
+  viewField :: Key -> Maybe (NonEmpty Input) -> field a -> view
 
 -- | The error type of the form.
 class FormError error where
    missingInputError :: Key -> error
-   invalidInputFormat :: Key -> Input -> error
+   invalidInputFormat :: Key -> NonEmpty Input -> error
 
 --------------------------------------------------------------------------------
 -- $generated

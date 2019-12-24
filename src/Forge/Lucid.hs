@@ -17,6 +17,7 @@ module Forge.Lucid
   , Field(..)
   ) where
 
+import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Forge.Internal.Types as Forge
@@ -29,7 +30,7 @@ import           Text.Read (readMaybe)
 -- | The errors possible with a lucid form.
 data Error
   = MissingInput Forge.Key
-  | InvalidInputFormat Forge.Key Forge.Input
+  | InvalidInputFormat Forge.Key (NonEmpty Forge.Input)
   deriving (Show, Eq)
 
 -- | A standard Html5 field.
@@ -52,22 +53,22 @@ instance (Forge.FormError error) =>
     case field of
       TextField ->
         case input of
-          Forge.TextInput text -> pure text
-          Forge.FileInput {} -> Left (Forge.invalidInputFormat key input)
+          Forge.TextInput text :| [] -> pure text
+          _ -> Left (Forge.invalidInputFormat key input)
       IntegerField ->
         case input of
-          Forge.FileInput {} -> Left (Forge.invalidInputFormat key input)
-          Forge.TextInput text ->
+          Forge.TextInput text :| [] ->
             case readMaybe (T.unpack text) of
               Just i -> pure i
               Nothing -> Left (Forge.invalidInputFormat key input)
+          _ -> Left (Forge.invalidInputFormat key input)
   viewField key minput =
     \case
       TextField ->
         Lucid.input_
           ([Lucid.name_ (Forge.unKey key)] <>
-           [Lucid.value_ value | Just (Forge.TextInput value) <- [minput]])
+           [Lucid.value_ value | Just (Forge.TextInput value :| []) <- [minput]])
       IntegerField ->
         Lucid.input_
           ([Lucid.name_ (Forge.unKey key), Lucid.type_ "number"] <>
-           [Lucid.value_ value | Just (Forge.TextInput value) <- [minput]])
+           [Lucid.value_ value | Just (Forge.TextInput value :| []) <- [minput]])
