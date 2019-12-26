@@ -19,6 +19,7 @@ module Forge.Lucid
 
 import           Data.Foldable
 import           Data.List.NonEmpty (NonEmpty(..))
+import           Data.Maybe
 import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as T
@@ -97,10 +98,22 @@ instance (Forge.FormError error) =>
            [Lucid.value_ value | Just (Forge.TextInput value :| []) <- [minput]])
       MultiselectField choices ->
         Lucid.select_
-          [Lucid.name_ (Forge.unKey key), Lucid.multiple_ "multiple"]
+          ([Lucid.name_ (Forge.unKey key), Lucid.multiple_ "multiple"])
           (mapM_
              (\(i, (_, k)) ->
-                Lucid.option_ [Lucid.value_ (uniqueKey i k)] (Lucid.toHtml k))
+                Lucid.option_
+                  ([Lucid.value_ (uniqueKey i k)] <>
+                   [ Lucid.selected_ "selected"
+                   | Just inputs <- [minput]
+                   , elem
+                       (uniqueKey i k)
+                       (mapMaybe
+                          (\case
+                             Forge.TextInput s -> pure s
+                             _ -> Nothing)
+                          (toList inputs))
+                   ])
+                  (Lucid.toHtml k))
              (zip [0 :: Integer ..] (toList choices)))
 
 -- | A key which is unique with respect to a list index and its display.
