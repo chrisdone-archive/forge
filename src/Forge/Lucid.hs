@@ -94,7 +94,7 @@ instance (Forge.FormError error) =>
            [Lucid.value_ value | Just (Forge.TextInput value :| []) <- [minput]])
       IntegerField ->
         Lucid.input_
-          ([Lucid.name_ (Forge.unKey key), Lucid.type_ "number"] <>
+          ([Lucid.name_ (Forge.unKey key), Lucid.type_ "text", Lucid.pattern_ "[0-9]*"] <>
            [Lucid.value_ value | Just (Forge.TextInput value :| []) <- [minput]])
       MultiselectField choices ->
         Lucid.select_
