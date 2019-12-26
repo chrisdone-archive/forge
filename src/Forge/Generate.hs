@@ -134,7 +134,11 @@ generate inputs = go PathBegin . unVerifiedForm
                       viewTransformer setView (map generatedView generateds)
                   }
             Generated {generatedValue = Failure err} ->
-              pure setGenerated {generatedValue = Failure err}
+              pure
+                setGenerated
+                  { generatedValue = Failure err
+                  , generatedView = viewTransformer (generatedView setGenerated) []
+                  }
     pureView :: forall e. view -> Generated view e ()
     pureView v = Generated {generatedView = v, generatedValue = pure ()}
 
