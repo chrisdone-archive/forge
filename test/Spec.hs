@@ -8,7 +8,6 @@ module Main (main) where
 
 import           Data.Functor.Identity
 import qualified Data.Map.Strict as M
-import qualified Data.Set as Set
 import           Data.Text (Text)
 import           Data.Validation
 import           Forge.Generate
@@ -397,7 +396,7 @@ multiples =
                    @(Html ())
                    @Field
                    @Error
-                   (basicNumericState (M.singleton 1 (123, "foo")))))
+                   (basicNumericState [(123, "foo")])))
              "<input pattern=\"[0-9]*\" name=\"/s/m/\" type=\"text\">\
              \<input pattern=\"[0-9]*\" value=\"123\" name=\"/i/1/l/m/\" type=\"text\">\
              \<input value=\"foo\" name=\"/i/1/r/\">")
@@ -463,17 +462,17 @@ multiples =
                           \<input pattern=\"[0-9]*\" value=\"123\" name=\"/i/2/l/m/\" type=\"text\">\
                           \<input value=\"World!\" name=\"/i/2/r/\">"
                       , generatedValue =
-                          Success (M.fromList [(1, (666, "Hello!")), (2, (123, "World!"))])
+                          Success [(666, "Hello!"), (123, "World!")]
                       }))
         fullySatisfied mempty
-        fullySatisfied (M.singleton 1 (123, "foo")))
+        fullySatisfied (pure (123, "foo")))
   where
     basicNumericState defaults =
       verified
         (ManyForm
            (\setView views -> setView <> mconcat views)
            (fmap
-              (Set.fromList . enumFromTo 1)
+              (enumFromTo 1)
               -- Above: We generate an ordered list here. However:
               -- this input could be a (TextField Nothing) producing an
               -- [Integer] value, thereby allowing the client-side to

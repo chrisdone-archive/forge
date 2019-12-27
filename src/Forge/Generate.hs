@@ -27,7 +27,6 @@ import           Data.Bifunctor
 import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import qualified Data.Set as Set
 import           Data.String
 import           Data.Validation
 import           Forge.Internal.Types
@@ -119,27 +118,20 @@ generate inputs = go PathBegin . unVerifiedForm
                { generatedView = generatedView'
                , generatedValue = first (const errs') (generatedValue generated)
                })
-        ManyForm viewTransformer setForm itemForm defaults -> do
+        ManyForm viewTransformer setForm itemForm _defaults -> do
           setGenerated <- go (path . InManySet) setForm
           case setGenerated of
             Generated {generatedValue = Success set, generatedView = setView} -> do
               generateds <-
-                fmap
-                  M.fromList
-                  (traverse
-                     (\idx ->
-                        fmap
-                          (idx, )
-                          (go
-                             (path . InManyIndex idx)
-                             (itemForm (M.lookup idx defaults))))
-                     (Set.toList set))
+                traverse
+                  (\idx -> go (path . InManyIndex idx) (itemForm Nothing))
+                  set
               let totalGenerated = sequenceA generateds
               pure
                 Generated
                   { generatedValue = generatedValue totalGenerated
                   , generatedView =
-                      viewTransformer setView (map generatedView (M.elems generateds))
+                      viewTransformer setView (map generatedView generateds)
                   }
             Generated {generatedValue = Failure err} ->
               pure
@@ -211,7 +203,7 @@ viewWithError inputs = go
             (go errs (path . InManySet) setForm)
             (map
                (\(i, a) -> go errs (path . InManyIndex i) (itemForm (pure a)))
-               (M.toList defaults))
+               (zip [1..] defaults))
         MapErrorForm _ form -> go Nothing (path . InMapError) form
         MapValueForm _ form -> go errs (path . InMapValue) form
         CeilingForm f form -> fst (f [] (go errs (path . InCeiling) form))

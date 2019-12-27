@@ -1,3 +1,4 @@
+{-# LANGUAGE Strict #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -32,7 +33,6 @@ module Forge.Verify
   ) where
 
 import           Control.Monad.State.Strict
-import qualified Data.Map.Strict as M
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
@@ -119,7 +119,7 @@ runVerification =
     go =
       \case
         ManyForm _ f1 f2 defs ->
-          go f1 *> void (traverse go (map (f2 . pure) (M.elems defs)))
+          go f1 *> void (traverse go (map (f2 . pure) defs))
         ValueForm {} -> pure ()
         MapValueForm _ f -> go f
         MapErrorForm _ f -> go f
