@@ -20,7 +20,6 @@ module Forge.Lucid
 import           Control.Applicative
 import           Data.Foldable
 import           Data.List.NonEmpty (NonEmpty(..))
-import qualified Data.List.NonEmpty as NE
 import           Data.Maybe
 import           Data.String
 import           Data.Text (Text)
@@ -111,27 +110,24 @@ instance (Forge.FormError error) =>
         Lucid.select_
           ([Lucid.name_ (Forge.unKey key), Lucid.multiple_ "multiple"])
           (mapM_
-             (\(i, (_, k)) ->
+             (\(i, (a, label)) ->
                 Lucid.option_
-                  ([Lucid.value_ (uniqueKey i k)] <>
-                   [ Lucid.selected_ "selected"
-                   | Just inputs <-
-                       [ minput <|>
-                         fmap
-                           (fmap Forge.TextInput)
-                           (mdef >>=
-                            NE.nonEmpty .
-                            mapMaybe (\e -> lookup e (toList choices)))
-                       ]
-                   , elem
-                       (uniqueKey i k)
-                       (mapMaybe
-                          (\case
-                             Forge.TextInput s -> pure s
-                             _ -> Nothing)
-                          (toList inputs))
-                   ])
-                  (Lucid.toHtml k))
+                  ([Lucid.value_ (uniqueKey i label)] <>
+                   case minput of
+                     Just inputs
+                       | elem
+                          (uniqueKey i label)
+                          (mapMaybe
+                             (\case
+                                Forge.TextInput s -> pure s
+                                _ -> Nothing)
+                             (toList inputs)) -> [Lucid.selected_ "selected"]
+                     _ ->
+                       case mdef of
+                         Just defaults
+                           | elem a defaults -> [Lucid.selected_ "selected"]
+                         _ -> [])
+                  (Lucid.toHtml label))
              (zip [0 :: Integer ..] (toList choices)))
 
 -- | A key which is unique with respect to a list index and its display.
