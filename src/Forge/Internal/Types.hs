@@ -108,7 +108,7 @@ data Form index (parse :: * -> *) view (field :: * -> *) error a where
     -> Form index parse view field error (Set Integer) -- ^ The set.
     -> (Maybe a -> Form index parse view field error a) -- ^ An individual item formlet.
     -> Map Integer a -- ^ Defaults.
-    -> Form index parse view field error [a] -- ^ The final form.
+    -> Form index parse view field error (Map Integer a) -- ^ The final form.
 
 instance (a ~ (), IsString view) =>
          IsString (Form index parse view field error a) where

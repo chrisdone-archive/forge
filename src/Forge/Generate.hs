@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -123,18 +124,22 @@ generate inputs = go PathBegin . unVerifiedForm
           case setGenerated of
             Generated {generatedValue = Success set, generatedView = setView} -> do
               generateds <-
-                traverse
-                  (\idx ->
-                     go
-                       (path . InManyIndex idx)
-                       (itemForm (M.lookup idx defaults)))
-                  (Set.toList set)
+                fmap
+                  M.fromList
+                  (traverse
+                     (\idx ->
+                        fmap
+                          (idx, )
+                          (go
+                             (path . InManyIndex idx)
+                             (itemForm (M.lookup idx defaults))))
+                     (Set.toList set))
               let totalGenerated = sequenceA generateds
               pure
                 Generated
                   { generatedValue = generatedValue totalGenerated
                   , generatedView =
-                      viewTransformer setView (map generatedView generateds)
+                      viewTransformer setView (map generatedView (M.elems generateds))
                   }
             Generated {generatedValue = Failure err} ->
               pure

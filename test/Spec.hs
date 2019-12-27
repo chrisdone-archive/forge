@@ -463,7 +463,7 @@ multiples =
                           \<input pattern=\"[0-9]*\" value=\"123\" name=\"/i/2/l/m/\" type=\"text\">\
                           \<input value=\"World!\" name=\"/i/2/r/\">"
                       , generatedValue =
-                          Success [(666, "Hello!"), (123, "World!")]
+                          Success (M.fromList [(1, (666, "Hello!")), (2, (123, "World!"))])
                       }))
         fullySatisfied mempty
         fullySatisfied (M.singleton 1 (123, "foo")))
