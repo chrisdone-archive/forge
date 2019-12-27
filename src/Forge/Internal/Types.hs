@@ -36,6 +36,7 @@ module Forge.Internal.Types
   ) where
 
 import           Data.List.NonEmpty (NonEmpty(..))
+import           Data.Map.Strict (Map)
 import           Data.Set (Set)
 import           Data.String
 import           Data.Text (Text)
@@ -105,7 +106,8 @@ data Form index (parse :: * -> *) view (field :: * -> *) error a where
   ManyForm
     :: (view -> [view] -> view) -- ^ The set's view, the items' views, and produce a final view.
     -> Form index parse view field error (Set Integer) -- ^ The set.
-    -> Form index parse view field error a -- ^ An individual item formlet.
+    -> (Maybe a -> Form index parse view field error a) -- ^ An individual item formlet.
+    -> Map Integer a -- ^ Defaults.
     -> Form index parse view field error [a] -- ^ The final form.
 
 instance (a ~ (), IsString view) =>

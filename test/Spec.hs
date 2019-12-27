@@ -453,5 +453,7 @@ multiples =
               -- [Integer] value, thereby allowing the client-side to
               -- delete with random access, or re-order formlets, etc.
               (FieldForm DynamicFieldName (IntegerField Nothing)))
-           ((,) <$> FieldForm DynamicFieldName (IntegerField Nothing) <*>
-            FieldForm DynamicFieldName (TextField Nothing)))
+           (const
+              ((,) <$> FieldForm DynamicFieldName (IntegerField Nothing) <*>
+               FieldForm DynamicFieldName (TextField Nothing)))
+           mempty)
