@@ -379,8 +379,28 @@ multiples =
           "Empty"
           (shouldBe
              (renderText
-                (view @'Verified @_ @(Html ()) @Field @Error basicNumericState))
+                (view
+                   @'Verified
+                   @_
+                   @(Html ())
+                   @Field
+                   @Error
+                   (basicNumericState mempty)))
              "<input pattern=\"[0-9]*\" name=\"/s/m/\" type=\"text\">")
+        it
+          "Empty with defaults"
+          (shouldBe
+             (renderText
+                (view
+                   @'Verified
+                   @_
+                   @(Html ())
+                   @Field
+                   @Error
+                   (basicNumericState (M.singleton 1 (123, "foo")))))
+             "<input pattern=\"[0-9]*\" name=\"/s/m/\" type=\"text\">\
+             \<input pattern=\"[0-9]*\" value=\"123\" name=\"/i/1/l/m/\" type=\"text\">\
+             \<input value=\"foo\" name=\"/i/1/r/\">")
         it
           "Missing input"
           (shouldBe
@@ -395,7 +415,7 @@ multiples =
                       @Field
                       @Error
                       (M.fromList [("/s/m/", pure (TextInput "2"))])
-                      basicNumericState)))
+                      (basicNumericState mempty))))
              (Generated
                 { generatedView =
                     mconcat
@@ -411,38 +431,44 @@ multiples =
                       , MissingInput (Key {unKey = "/i/2/r/"})
                       ]
                 }))
-        it
-          "Fully satisfied inputs"
-          (shouldBe
-             ((\Generated {generatedView, generatedValue} ->
-                 Generated
-                   {generatedValue, generatedView = renderText generatedView})
-                (runIdentity
-                   (generate
-                      @'Verified
-                      @Identity
-                      @(Html ())
-                      @Field
-                      @Error
-                      (M.fromList
-                         [ ("/s/m/", pure (TextInput "2"))
-                         , ("/i/1/l/m/", pure (TextInput "666"))
-                         , ("/i/1/r/", pure (TextInput "Hello!"))
-                         , ("/i/2/l/m/", pure (TextInput "123"))
-                         , ("/i/2/r/", pure (TextInput "World!"))
-                         ])
-                      basicNumericState)))
-             (Generated
-                { generatedView =
-                    "<input pattern=\"[0-9]*\" value=\"2\" name=\"/s/m/\" type=\"text\">\
-                    \<input pattern=\"[0-9]*\" value=\"666\" name=\"/i/1/l/m/\" type=\"text\">\
-                    \<input value=\"Hello!\" name=\"/i/1/r/\">\
-                    \<input pattern=\"[0-9]*\" value=\"123\" name=\"/i/2/l/m/\" type=\"text\">\
-                    \<input value=\"World!\" name=\"/i/2/r/\">"
-                , generatedValue = Success [(666, "Hello!"), (123, "World!")]
-                })))
+        let fullySatisfied defaults =
+              it
+                ("Fully satisfied inputs, defaults = " ++ show defaults)
+                (shouldBe
+                   ((\Generated {generatedView, generatedValue} ->
+                       Generated
+                         { generatedValue
+                         , generatedView = renderText generatedView
+                         })
+                      (runIdentity
+                         (generate
+                            @'Verified
+                            @Identity
+                            @(Html ())
+                            @Field
+                            @Error
+                            (M.fromList
+                               [ ("/s/m/", pure (TextInput "2"))
+                               , ("/i/1/l/m/", pure (TextInput "666"))
+                               , ("/i/1/r/", pure (TextInput "Hello!"))
+                               , ("/i/2/l/m/", pure (TextInput "123"))
+                               , ("/i/2/r/", pure (TextInput "World!"))
+                               ])
+                            (basicNumericState defaults))))
+                   (Generated
+                      { generatedView =
+                          "<input pattern=\"[0-9]*\" value=\"2\" name=\"/s/m/\" type=\"text\">\
+                                         \<input pattern=\"[0-9]*\" value=\"666\" name=\"/i/1/l/m/\" type=\"text\">\
+                                         \<input value=\"Hello!\" name=\"/i/1/r/\">\
+                                         \<input pattern=\"[0-9]*\" value=\"123\" name=\"/i/2/l/m/\" type=\"text\">\
+                                         \<input value=\"World!\" name=\"/i/2/r/\">"
+                      , generatedValue =
+                          Success [(666, "Hello!"), (123, "World!")]
+                      }))
+        fullySatisfied mempty
+        fullySatisfied (M.singleton 1 (123, "foo")))
   where
-    basicNumericState =
+    basicNumericState defaults =
       verified
         (ManyForm
            (\setView views -> setView <> mconcat views)
@@ -453,7 +479,8 @@ multiples =
               -- [Integer] value, thereby allowing the client-side to
               -- delete with random access, or re-order formlets, etc.
               (FieldForm DynamicFieldName (IntegerField Nothing)))
-           (const
-              ((,) <$> FieldForm DynamicFieldName (IntegerField Nothing) <*>
-               FieldForm DynamicFieldName (TextField Nothing)))
-           mempty)
+           (\mdefault ->
+              ((,) <$>
+               FieldForm DynamicFieldName (IntegerField (fmap fst mdefault)) <*>
+               FieldForm DynamicFieldName (TextField (fmap snd mdefault))))
+           defaults)
