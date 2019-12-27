@@ -17,8 +17,10 @@ module Forge.Lucid
   , Field(..)
   ) where
 
+import           Control.Applicative
 import           Data.Foldable
 import           Data.List.NonEmpty (NonEmpty(..))
+import qualified Data.List.NonEmpty as NE
 import           Data.Maybe
 import           Data.String
 import           Data.Text (Text)
@@ -39,9 +41,9 @@ data Error
 
 -- | A standard Html5 field.
 data Field a where
-  TextField :: Field Text
-  IntegerField :: Field Integer
-  MultiselectField :: NonEmpty (a, Text) -> Field [a]
+  TextField :: Maybe Text -> Field Text
+  IntegerField :: Maybe Integer -> Field Integer
+  MultiselectField :: Eq a => Maybe [a] -> NonEmpty (a, Text) -> Field [a]
 
 --------------------------------------------------------------------------------
 -- Instantiation of classes
@@ -56,18 +58,18 @@ instance (Forge.FormError error) =>
          Forge.FormField (Lucid.Html ()) Field error where
   parseFieldInput key field input =
     case field of
-      TextField ->
+      TextField _ ->
         case input of
           Forge.TextInput text :| [] -> pure text
           _ -> Left (Forge.invalidInputFormat key input)
-      IntegerField ->
+      IntegerField _ ->
         case input of
           Forge.TextInput text :| [] ->
             case readMaybe (T.unpack text) of
               Just i -> pure i
               Nothing -> Left (Forge.invalidInputFormat key input)
           _ -> Left (Forge.invalidInputFormat key input)
-      MultiselectField choices -> do
+      MultiselectField _ choices -> do
         keys <-
           mapM
             (\case
@@ -88,15 +90,24 @@ instance (Forge.FormError error) =>
                   (zip [0 :: Integer ..] (toList choices))
   viewField key minput =
     \case
-      TextField ->
+      TextField mdef ->
         Lucid.input_
           ([Lucid.name_ (Forge.unKey key)] <>
-           [Lucid.value_ value | Just (Forge.TextInput value :| []) <- [minput]])
-      IntegerField ->
+           [ Lucid.value_ value
+           | Just (Forge.TextInput value :| []) <-
+               [minput <|> fmap (pure . Forge.TextInput) mdef]
+           ])
+      IntegerField mdef ->
         Lucid.input_
-          ([Lucid.name_ (Forge.unKey key), Lucid.type_ "text", Lucid.pattern_ "[0-9]*"] <>
-           [Lucid.value_ value | Just (Forge.TextInput value :| []) <- [minput]])
-      MultiselectField choices ->
+          ([ Lucid.name_ (Forge.unKey key)
+           , Lucid.type_ "text"
+           , Lucid.pattern_ "[0-9]*"
+           ] <>
+           [ Lucid.value_ value
+           | Just (Forge.TextInput value :| []) <-
+               [minput <|> fmap (pure . Forge.TextInput . T.pack . show) mdef]
+           ])
+      MultiselectField mdef choices ->
         Lucid.select_
           ([Lucid.name_ (Forge.unKey key), Lucid.multiple_ "multiple"])
           (mapM_
@@ -104,7 +115,14 @@ instance (Forge.FormError error) =>
                 Lucid.option_
                   ([Lucid.value_ (uniqueKey i k)] <>
                    [ Lucid.selected_ "selected"
-                   | Just inputs <- [minput]
+                   | Just inputs <-
+                       [ minput <|>
+                         fmap
+                           (fmap Forge.TextInput)
+                           (mdef >>=
+                            NE.nonEmpty .
+                            mapMaybe (\e -> lookup e (toList choices)))
+                       ]
                    , elem
                        (uniqueKey i k)
                        (mapMaybe

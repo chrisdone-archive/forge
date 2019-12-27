@@ -60,11 +60,11 @@ thTests =
                       (view @'Unverified @_ @(Html ()) @Field @Error
                          $$($$(verify
                                  [|| let namedForm = ((,) <$>
-                                           FieldForm (StaticFieldName "foo") IntegerField <*>
-                                           FieldForm (StaticFieldName "bar") TextField)
+                                           FieldForm (StaticFieldName "foo") (IntegerField Nothing) <*>
+                                           FieldForm (StaticFieldName "bar") (TextField Nothing))
                                      in namedForm
                                   ||])))))
-                "<input name=\"foo\" type=\"number\"><input name=\"bar\">")
+                "<input pattern=\"[0-9]*\" name=\"foo\" type=\"text\"><input name=\"bar\">")
 
 missingInputs :: Spec
 missingInputs = do
@@ -80,7 +80,7 @@ missingInputs = do
                 @Field
                 @Error
                 mempty
-                (verified (FieldForm DynamicFieldName IntegerField)))))
+                (verified (FieldForm DynamicFieldName (IntegerField Nothing))))))
        (Failure [MissingInput "/"]))
   it
     "Missing input [multiple]"
@@ -95,8 +95,8 @@ missingInputs = do
                 @Error
                 mempty
                 (verified
-                   (FieldForm DynamicFieldName IntegerField *>
-                    FieldForm DynamicFieldName TextField)))))
+                   (FieldForm DynamicFieldName (IntegerField Nothing) *>
+                    FieldForm DynamicFieldName (TextField Nothing))))))
        (Failure [MissingInput "/l/m/", MissingInput "/r/"]))
 
 invalidInputs :: Spec
@@ -113,8 +113,8 @@ invalidInputs = do it
                                  @Error
                                  (M.singleton "/" (pure (FileInput "")))
                                  (verified
-                                    (FieldForm DynamicFieldName IntegerField *>
-                                     FieldForm DynamicFieldName TextField)))))
+                                    (FieldForm DynamicFieldName (IntegerField Nothing) *>
+                                     FieldForm DynamicFieldName (TextField Nothing))))))
                         (Failure
                            [ MissingInput (Key {unKey = "/l/m/"})
                            , MissingInput (Key {unKey = "/r/"})
@@ -131,7 +131,7 @@ invalidInputs = do it
                                  @Field
                                  @Error
                                  (M.singleton "/" (pure (TextInput "x")))
-                                 (verified (FieldForm DynamicFieldName IntegerField)))))
+                                 (verified (FieldForm DynamicFieldName (IntegerField Nothing))))))
                         (Failure [InvalidInputFormat "/" (pure (TextInput "x"))]))
 
 inputParsing :: Spec
@@ -148,7 +148,7 @@ inputParsing = do
                 @Field
                 @Error
                 (M.singleton "/" (pure (TextInput "5")))
-                (verified (FieldForm DynamicFieldName IntegerField)))))
+                (verified (FieldForm DynamicFieldName (IntegerField Nothing))))))
        (Success 5))
   it
     "Form parsing"
@@ -172,7 +172,7 @@ inputParsing = do
                                      (InvalidInputFormat
                                         "/"
                                         (pure (FileInput "")))))
-                      (FieldForm DynamicFieldName IntegerField))))))
+                      (FieldForm DynamicFieldName (IntegerField Nothing)))))))
        (Success 12))
 
 floor :: Spec
@@ -216,16 +216,22 @@ floor =
                                                    p_ "invalid input format"
                                                  MissingInput {} ->
                                                    p_ "missing input!"
+                                                 InvalidMultiselectKey {} ->
+                                                   p_ "Invalid multiselect"
                                      , Nothing))
                            in (((,) <$>
                                 flooring
                                   (MapErrorForm
                                      LucidError
-                                     (FieldForm DynamicFieldName TextField)) <*>
+                                     (FieldForm
+                                        DynamicFieldName
+                                        (TextField Nothing))) <*>
                                 flooring
                                   (MapErrorForm
                                      LucidError
-                                     (FieldForm DynamicFieldName TextField)))))))))))
+                                     (FieldForm
+                                        DynamicFieldName
+                                        (TextField Nothing))))))))))))
        "<input value=\"letmein\" name=\"/p/l/m/f/e/\"><p>passwords do not match</p><input value=\"letmein!\" name=\"/p/r/f/e/\"><p>passwords do not match</p>")
 
 parseFail :: Spec
@@ -249,7 +255,7 @@ parseFail =
                            (if i > 5
                               then Right i
                               else Left (InvalidInputFormat "/" (pure (FileInput "")))))
-                      (FieldForm DynamicFieldName IntegerField))))))
+                      (FieldForm DynamicFieldName (IntegerField Nothing)))))))
        (Failure [InvalidInputFormat (Key {unKey = "/"}) (pure (FileInput ""))]))
 
 ceiling :: Spec
@@ -281,7 +287,9 @@ ceiling =
                                             InvalidInputFormat {} ->
                                               li_ "invalid input format"
                                             MissingInput {} ->
-                                              li_ "missing input!")
+                                              li_ "missing input!"
+                                            InvalidMultiselectKey {} ->
+                                              p_ "Invalid multiselect")
                                    merr)
                             , []))
                          (ParseForm
@@ -292,8 +300,8 @@ ceiling =
                                     else Left (NumberTooLow i)))
                             (MapErrorForm
                                LucidError2
-                               (FieldForm DynamicFieldName IntegerField)))))))))
-       "<input value=\"1\" name=\"/c/p/e/\" type=\"number\"><ul><li>number too low!</li></ul>")
+                               (FieldForm DynamicFieldName (IntegerField Nothing))))))))))
+       "<input pattern=\"[0-9]*\" value=\"1\" name=\"/c/p/e/\" type=\"text\"><ul><li>number too low!</li></ul>")
 
 nameStability :: Spec
 nameStability =
@@ -310,13 +318,13 @@ nameStability =
                    @Field
                    @Error
                    (verified
-                      ((,,) <$> FieldForm DynamicFieldName TextField <*>
+                      ((,,) <$> FieldForm DynamicFieldName (TextField Nothing) <*>
                        traverse
-                         (const (FieldForm DynamicFieldName IntegerField))
+                         (const (FieldForm DynamicFieldName (IntegerField Nothing)))
                          [1 :: Int .. 1] <*>
-                       FieldForm DynamicFieldName TextField))))
+                       FieldForm DynamicFieldName (TextField Nothing)))))
              "<input name=\"/l/l/m/\">\
-                           \<input name=\"/l/r/l/m/\" type=\"number\">\
+                           \<input pattern=\"[0-9]*\" name=\"/l/r/l/m/\" type=\"text\">\
                            \<input name=\"/r/\">")
         it
           "Sequence 9"
@@ -329,21 +337,21 @@ nameStability =
                    @Field
                    @Error
                    (verified
-                      ((,,) <$> FieldForm DynamicFieldName TextField <*>
+                      ((,,) <$> FieldForm DynamicFieldName (TextField Nothing) <*>
                        traverse
-                         (const (FieldForm DynamicFieldName IntegerField))
+                         (const (FieldForm DynamicFieldName (IntegerField Nothing)))
                          [1 :: Int .. 9] <*>
-                       FieldForm DynamicFieldName TextField))))
+                       FieldForm DynamicFieldName (TextField Nothing)))))
              "<input name=\"/l/l/m/\">\
-                           \<input name=\"/l/r/l/m/\" type=\"number\">\
-                           \<input name=\"/l/r/r/l/m/\" type=\"number\">\
-                           \<input name=\"/l/r/r/r/l/m/\" type=\"number\">\
-                           \<input name=\"/l/r/r/r/r/l/m/\" type=\"number\">\
-                           \<input name=\"/l/r/r/r/r/r/l/m/\" type=\"number\">\
-                           \<input name=\"/l/r/r/r/r/r/r/l/m/\" type=\"number\">\
-                           \<input name=\"/l/r/r/r/r/r/r/r/l/m/\" type=\"number\">\
-                           \<input name=\"/l/r/r/r/r/r/r/r/r/l/m/\" type=\"number\">\
-                           \<input name=\"/l/r/r/r/r/r/r/r/r/r/l/m/\" type=\"number\">\
+                           \<input pattern=\"[0-9]*\" name=\"/l/r/l/m/\" type=\"text\">\
+                           \<input pattern=\"[0-9]*\" name=\"/l/r/r/l/m/\" type=\"text\">\
+                           \<input pattern=\"[0-9]*\" name=\"/l/r/r/r/l/m/\" type=\"text\">\
+                           \<input pattern=\"[0-9]*\" name=\"/l/r/r/r/r/l/m/\" type=\"text\">\
+                           \<input pattern=\"[0-9]*\" name=\"/l/r/r/r/r/r/l/m/\" type=\"text\">\
+                           \<input pattern=\"[0-9]*\" name=\"/l/r/r/r/r/r/r/l/m/\" type=\"text\">\
+                           \<input pattern=\"[0-9]*\" name=\"/l/r/r/r/r/r/r/r/l/m/\" type=\"text\">\
+                           \<input pattern=\"[0-9]*\" name=\"/l/r/r/r/r/r/r/r/r/l/m/\" type=\"text\">\
+                           \<input pattern=\"[0-9]*\" name=\"/l/r/r/r/r/r/r/r/r/r/l/m/\" type=\"text\">\
                            \<input name=\"/r/\">"))
 
 simpleView :: SpecWith ()
@@ -359,9 +367,9 @@ simpleView =
              @Field
              @Error
              (verified
-                ((,) <$> FieldForm DynamicFieldName IntegerField <*>
-                 FieldForm DynamicFieldName TextField))))
-       "<input name=\"/l/m/\" type=\"number\"><input name=\"/r/\">")
+                ((,) <$> FieldForm DynamicFieldName (IntegerField Nothing) <*>
+                 FieldForm DynamicFieldName (TextField Nothing)))))
+       "<input pattern=\"[0-9]*\" name=\"/l/m/\" type=\"text\"><input name=\"/r/\">")
 
 multiples :: Spec
 multiples =
@@ -372,7 +380,7 @@ multiples =
           (shouldBe
              (renderText
                 (view @'Verified @_ @(Html ()) @Field @Error basicNumericState))
-             "<input name=\"/s/m/\" type=\"number\">")
+             "<input pattern=\"[0-9]*\" name=\"/s/m/\" type=\"text\">")
         it
           "Missing input"
           (shouldBe
@@ -391,9 +399,9 @@ multiples =
              (Generated
                 { generatedView =
                     mconcat
-                      [ "<input value=\"2\" name=\"/s/m/\" type=\"number\">" -- set
-                      , "<input name=\"/i/1/l/m/\" type=\"number\"><input name=\"/i/1/r/\">" -- 1
-                      , "<input name=\"/i/2/l/m/\" type=\"number\"><input name=\"/i/2/r/\">" -- 2
+                      [ "<input pattern=\"[0-9]*\" value=\"2\" name=\"/s/m/\" type=\"text\">" -- set
+                      , "<input pattern=\"[0-9]*\" name=\"/i/1/l/m/\" type=\"text\"><input name=\"/i/1/r/\">" -- 1
+                      , "<input pattern=\"[0-9]*\" name=\"/i/2/l/m/\" type=\"text\"><input name=\"/i/2/r/\">" -- 2
                       ]
                 , generatedValue =
                     Failure
@@ -426,10 +434,10 @@ multiples =
                       basicNumericState)))
              (Generated
                 { generatedView =
-                    "<input value=\"2\" name=\"/s/m/\" type=\"number\">\
-                    \<input value=\"666\" name=\"/i/1/l/m/\" type=\"number\">\
+                    "<input pattern=\"[0-9]*\" value=\"2\" name=\"/s/m/\" type=\"text\">\
+                    \<input pattern=\"[0-9]*\" value=\"666\" name=\"/i/1/l/m/\" type=\"text\">\
                     \<input value=\"Hello!\" name=\"/i/1/r/\">\
-                    \<input value=\"123\" name=\"/i/2/l/m/\" type=\"number\">\
+                    \<input pattern=\"[0-9]*\" value=\"123\" name=\"/i/2/l/m/\" type=\"text\">\
                     \<input value=\"World!\" name=\"/i/2/r/\">"
                 , generatedValue = Success [(666, "Hello!"), (123, "World!")]
                 })))
@@ -441,9 +449,9 @@ multiples =
            (fmap
               (Set.fromList . enumFromTo 1)
               -- Above: We generate an ordered list here. However:
-              -- this input could be a TextField producing an
+              -- this input could be a (TextField Nothing) producing an
               -- [Integer] value, thereby allowing the client-side to
               -- delete with random access, or re-order formlets, etc.
-              (FieldForm DynamicFieldName IntegerField))
-           ((,) <$> FieldForm DynamicFieldName IntegerField <*>
-            FieldForm DynamicFieldName TextField))
+              (FieldForm DynamicFieldName (IntegerField Nothing)))
+           ((,) <$> FieldForm DynamicFieldName (IntegerField Nothing) <*>
+            FieldForm DynamicFieldName (TextField Nothing)))
