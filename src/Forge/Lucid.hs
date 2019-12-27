@@ -24,8 +24,10 @@ import           Data.Maybe
 import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import qualified Forge.Internal.Types as Forge
 import qualified Lucid
+import           Text.Email.Validate as Email
 import           Text.Read (readMaybe)
 
 --------------------------------------------------------------------------------
@@ -35,7 +37,6 @@ import           Text.Read (readMaybe)
 data Error
   = MissingInput Forge.Key
   | InvalidInputFormat Forge.Key (NonEmpty Forge.Input)
-  | InvalidMultiselectKey Text
   deriving (Show, Eq)
 
 -- | A standard Html5 field.
@@ -43,6 +44,7 @@ data Field a where
   TextField :: Maybe Text -> Field Text
   IntegerField :: Maybe Integer -> Field Integer
   MultiselectField :: Eq a => Maybe [a] -> NonEmpty (a, Text) -> Field [a]
+  EmailField :: Maybe EmailAddress -> Field EmailAddress
 
 --------------------------------------------------------------------------------
 -- Instantiation of classes
@@ -67,6 +69,13 @@ instance (Forge.FormError error) =>
             case readMaybe (T.unpack text) of
               Just i -> pure i
               Nothing -> Left (Forge.invalidInputFormat key input)
+          _ -> Left (Forge.invalidInputFormat key input)
+      EmailField _ ->
+        case input of
+          Forge.TextInput text :| [] ->
+            case Email.validate (T.encodeUtf8 text) of
+              Right i -> pure i
+              Left {} -> Left (Forge.invalidInputFormat key input)
           _ -> Left (Forge.invalidInputFormat key input)
       MultiselectField _ choices -> do
         keys <-
@@ -95,6 +104,17 @@ instance (Forge.FormError error) =>
            [ Lucid.value_ value
            | Just (Forge.TextInput value :| []) <-
                [minput <|> fmap (pure . Forge.TextInput) mdef]
+           ])
+      EmailField mdef ->
+        Lucid.input_
+          ([Lucid.name_ (Forge.unKey key), Lucid.type_ "email"] <>
+           [ Lucid.value_ value
+           | Just (Forge.TextInput value :| []) <-
+               [ minput <|>
+                 fmap
+                   (pure . Forge.TextInput)
+                   (fmap (T.decodeUtf8 . Email.toByteString) mdef)
+               ]
            ])
       IntegerField mdef ->
         Lucid.input_

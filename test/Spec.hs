@@ -215,8 +215,6 @@ floor =
                                                    p_ "invalid input format"
                                                  MissingInput {} ->
                                                    p_ "missing input!"
-                                                 InvalidMultiselectKey {} ->
-                                                   p_ "Invalid multiselect"
                                      , Nothing))
                            in (((,) <$>
                                 flooring
@@ -286,9 +284,7 @@ ceiling =
                                             InvalidInputFormat {} ->
                                               li_ "invalid input format"
                                             MissingInput {} ->
-                                              li_ "missing input!"
-                                            InvalidMultiselectKey {} ->
-                                              p_ "Invalid multiselect")
+                                              li_ "missing input!")
                                    merr)
                             , []))
                          (ParseForm
@@ -299,7 +295,9 @@ ceiling =
                                     else Left (NumberTooLow i)))
                             (MapErrorForm
                                LucidError2
-                               (FieldForm DynamicFieldName (IntegerField Nothing))))))))))
+                               (FieldForm
+                                  DynamicFieldName
+                                  (IntegerField Nothing))))))))))
        "<input pattern=\"[0-9]*\" value=\"1\" name=\"/c/p/e/\" type=\"text\"><ul><li>number too low!</li></ul>")
 
 nameStability :: Spec
