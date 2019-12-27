@@ -133,6 +133,9 @@ data FieldName index where
   DynamicFieldName :: FieldName index
   StaticFieldName :: Text -> FieldName 'Unverified
 
+instance (index ~ 'Unverified) => IsString (FieldName index) where
+  fromString = StaticFieldName . fromString
+
 --------------------------------------------------------------------------------
 -- $type-classes
 --
