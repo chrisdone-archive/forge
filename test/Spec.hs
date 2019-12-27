@@ -458,10 +458,10 @@ multiples =
                    (Generated
                       { generatedView =
                           "<input pattern=\"[0-9]*\" value=\"2\" name=\"/s/m/\" type=\"text\">\
-                                         \<input pattern=\"[0-9]*\" value=\"666\" name=\"/i/1/l/m/\" type=\"text\">\
-                                         \<input value=\"Hello!\" name=\"/i/1/r/\">\
-                                         \<input pattern=\"[0-9]*\" value=\"123\" name=\"/i/2/l/m/\" type=\"text\">\
-                                         \<input value=\"World!\" name=\"/i/2/r/\">"
+                          \<input pattern=\"[0-9]*\" value=\"666\" name=\"/i/1/l/m/\" type=\"text\">\
+                          \<input value=\"Hello!\" name=\"/i/1/r/\">\
+                          \<input pattern=\"[0-9]*\" value=\"123\" name=\"/i/2/l/m/\" type=\"text\">\
+                          \<input value=\"World!\" name=\"/i/2/r/\">"
                       , generatedValue =
                           Success [(666, "Hello!"), (123, "World!")]
                       }))
