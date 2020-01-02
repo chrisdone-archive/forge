@@ -18,6 +18,8 @@ module Forge.Lucid
   ) where
 
 import           Control.Applicative
+import           Control.Monad
+import           Data.Char
 import           Data.Fixed
 import           Data.Foldable
 import           Data.List.NonEmpty (NonEmpty(..))
@@ -76,7 +78,7 @@ instance (Forge.FormError error) =>
       FixedField _ ->
         case input of
           Forge.TextInput text :| [] ->
-            case readMaybe (T.unpack text) of
+            case readFixed (T.unpack text) of
               Just i -> pure i
               Nothing -> Left (Forge.invalidInputFormat key input)
           _ -> Left (Forge.invalidInputFormat key input)
@@ -217,3 +219,13 @@ instance (Forge.FormError error) =>
 -- | A key which is unique with respect to a list index and its display.
 uniqueKey :: Integer -> Text -> Text
 uniqueKey i title = fromString (show i) <> ":" <> title
+
+-- | Read a fixed precision.
+readFixed :: HasResolution p => String -> Maybe (Fixed p)
+readFixed s = do
+  fixed <- readMaybe s
+  let (_, rhs) = span (/= '.') s
+  guard
+    (null rhs ||
+     (all isDigit (drop 1 rhs) && (10 ^ length (drop 1 rhs)) <= resolution fixed))
+  pure fixed
