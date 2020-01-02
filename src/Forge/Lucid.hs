@@ -18,6 +18,7 @@ module Forge.Lucid
   ) where
 
 import           Control.Applicative
+import           Data.Fixed
 import           Data.Foldable
 import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.Maybe
@@ -46,6 +47,7 @@ data Field a where
   MultiselectField :: Eq a => Maybe [a] -> NonEmpty (a, Text) -> Field [a]
   DropdownField :: Eq a => Maybe a -> NonEmpty (a, Text) -> Field a
   EmailField :: Maybe EmailAddress -> Field EmailAddress
+  FixedField :: HasResolution a => Maybe (Fixed a) -> Field (Fixed a)
 
 --------------------------------------------------------------------------------
 -- Instantiation of classes
@@ -65,6 +67,13 @@ instance (Forge.FormError error) =>
           Forge.TextInput text :| [] -> pure text
           _ -> Left (Forge.invalidInputFormat key input)
       IntegerField _ ->
+        case input of
+          Forge.TextInput text :| [] ->
+            case readMaybe (T.unpack text) of
+              Just i -> pure i
+              Nothing -> Left (Forge.invalidInputFormat key input)
+          _ -> Left (Forge.invalidInputFormat key input)
+      FixedField _ ->
         case input of
           Forge.TextInput text :| [] ->
             case readMaybe (T.unpack text) of
@@ -142,7 +151,17 @@ instance (Forge.FormError error) =>
         Lucid.input_
           ([ Lucid.name_ (Forge.unKey key)
            , Lucid.type_ "text"
-           , Lucid.pattern_ "[0-9]*"
+           , Lucid.pattern_ "-?[0-9]*"
+           ] <>
+           [ Lucid.value_ value
+           | Just (Forge.TextInput value :| []) <-
+               [minput <|> fmap (pure . Forge.TextInput . T.pack . show) mdef]
+           ])
+      FixedField mdef ->
+        Lucid.input_
+          ([ Lucid.name_ (Forge.unKey key)
+           , Lucid.type_ "text"
+           , Lucid.pattern_ "-?[0-9.]*"
            ] <>
            [ Lucid.value_ value
            | Just (Forge.TextInput value :| []) <-
