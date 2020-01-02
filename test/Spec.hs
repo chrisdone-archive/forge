@@ -63,7 +63,7 @@ thTests =
                                            FieldForm (StaticFieldName "bar") (TextField Nothing))
                                      in namedForm
                                   ||])))))
-                "<input pattern=\"[0-9]*\" name=\"foo\" type=\"text\"><input name=\"bar\">")
+                "<input pattern=\"-?[0-9]*\" name=\"foo\" type=\"text\"><input name=\"bar\">")
 
 missingInputs :: Spec
 missingInputs = do
@@ -298,7 +298,7 @@ ceiling =
                                (FieldForm
                                   DynamicFieldName
                                   (IntegerField Nothing))))))))))
-       "<input pattern=\"[0-9]*\" value=\"1\" name=\"/c/p/e/\" type=\"text\"><ul><li>number too low!</li></ul>")
+       "<input pattern=\"-?[0-9]*\" value=\"1\" name=\"/c/p/e/\" type=\"text\"><ul><li>number too low!</li></ul>")
 
 nameStability :: Spec
 nameStability =
@@ -321,7 +321,7 @@ nameStability =
                          [1 :: Int .. 1] <*>
                        FieldForm DynamicFieldName (TextField Nothing)))))
              "<input name=\"/l/l/m/\">\
-                           \<input pattern=\"[0-9]*\" name=\"/l/r/l/m/\" type=\"text\">\
+                           \<input pattern=\"-?[0-9]*\" name=\"/l/r/l/m/\" type=\"text\">\
                            \<input name=\"/r/\">")
         it
           "Sequence 9"
@@ -340,15 +340,15 @@ nameStability =
                          [1 :: Int .. 9] <*>
                        FieldForm DynamicFieldName (TextField Nothing)))))
              "<input name=\"/l/l/m/\">\
-                           \<input pattern=\"[0-9]*\" name=\"/l/r/l/m/\" type=\"text\">\
-                           \<input pattern=\"[0-9]*\" name=\"/l/r/r/l/m/\" type=\"text\">\
-                           \<input pattern=\"[0-9]*\" name=\"/l/r/r/r/l/m/\" type=\"text\">\
-                           \<input pattern=\"[0-9]*\" name=\"/l/r/r/r/r/l/m/\" type=\"text\">\
-                           \<input pattern=\"[0-9]*\" name=\"/l/r/r/r/r/r/l/m/\" type=\"text\">\
-                           \<input pattern=\"[0-9]*\" name=\"/l/r/r/r/r/r/r/l/m/\" type=\"text\">\
-                           \<input pattern=\"[0-9]*\" name=\"/l/r/r/r/r/r/r/r/l/m/\" type=\"text\">\
-                           \<input pattern=\"[0-9]*\" name=\"/l/r/r/r/r/r/r/r/r/l/m/\" type=\"text\">\
-                           \<input pattern=\"[0-9]*\" name=\"/l/r/r/r/r/r/r/r/r/r/l/m/\" type=\"text\">\
+                           \<input pattern=\"-?[0-9]*\" name=\"/l/r/l/m/\" type=\"text\">\
+                           \<input pattern=\"-?[0-9]*\" name=\"/l/r/r/l/m/\" type=\"text\">\
+                           \<input pattern=\"-?[0-9]*\" name=\"/l/r/r/r/l/m/\" type=\"text\">\
+                           \<input pattern=\"-?[0-9]*\" name=\"/l/r/r/r/r/l/m/\" type=\"text\">\
+                           \<input pattern=\"-?[0-9]*\" name=\"/l/r/r/r/r/r/l/m/\" type=\"text\">\
+                           \<input pattern=\"-?[0-9]*\" name=\"/l/r/r/r/r/r/r/l/m/\" type=\"text\">\
+                           \<input pattern=\"-?[0-9]*\" name=\"/l/r/r/r/r/r/r/r/l/m/\" type=\"text\">\
+                           \<input pattern=\"-?[0-9]*\" name=\"/l/r/r/r/r/r/r/r/r/l/m/\" type=\"text\">\
+                           \<input pattern=\"-?[0-9]*\" name=\"/l/r/r/r/r/r/r/r/r/r/l/m/\" type=\"text\">\
                            \<input name=\"/r/\">"))
 
 simpleView :: SpecWith ()
@@ -366,7 +366,7 @@ simpleView =
              (verified
                 ((,) <$> FieldForm DynamicFieldName (IntegerField Nothing) <*>
                  FieldForm DynamicFieldName (TextField Nothing)))))
-       "<input pattern=\"[0-9]*\" name=\"/l/m/\" type=\"text\"><input name=\"/r/\">")
+       "<input pattern=\"-?[0-9]*\" name=\"/l/m/\" type=\"text\"><input name=\"/r/\">")
 
 multiples :: Spec
 multiples =
@@ -383,7 +383,7 @@ multiples =
                    @Field
                    @Error
                    (basicNumericState mempty)))
-             "<input pattern=\"[0-9]*\" name=\"/s/m/\" type=\"text\">")
+             "<input pattern=\"-?[0-9]*\" name=\"/s/m/\" type=\"text\">")
         it
           "Empty with defaults"
           (shouldBe
@@ -395,8 +395,8 @@ multiples =
                    @Field
                    @Error
                    (basicNumericState [(123, "foo")])))
-             "<input pattern=\"[0-9]*\" name=\"/s/m/\" type=\"text\">\
-             \<input pattern=\"[0-9]*\" value=\"123\" name=\"/i/1/l/m/\" type=\"text\">\
+             "<input pattern=\"-?[0-9]*\" name=\"/s/m/\" type=\"text\">\
+             \<input pattern=\"-?[0-9]*\" value=\"123\" name=\"/i/1/l/m/\" type=\"text\">\
              \<input value=\"foo\" name=\"/i/1/r/\">")
         it
           "Missing input"
@@ -416,9 +416,9 @@ multiples =
              (Generated
                 { generatedView =
                     mconcat
-                      [ "<input pattern=\"[0-9]*\" value=\"2\" name=\"/s/m/\" type=\"text\">" -- set
-                      , "<input pattern=\"[0-9]*\" name=\"/i/1/l/m/\" type=\"text\"><input name=\"/i/1/r/\">" -- 1
-                      , "<input pattern=\"[0-9]*\" name=\"/i/2/l/m/\" type=\"text\"><input name=\"/i/2/r/\">" -- 2
+                      [ "<input pattern=\"-?[0-9]*\" value=\"2\" name=\"/s/m/\" type=\"text\">" -- set
+                      , "<input pattern=\"-?[0-9]*\" name=\"/i/1/l/m/\" type=\"text\"><input name=\"/i/1/r/\">" -- 1
+                      , "<input pattern=\"-?[0-9]*\" name=\"/i/2/l/m/\" type=\"text\"><input name=\"/i/2/r/\">" -- 2
                       ]
                 , generatedValue =
                     Failure
@@ -454,10 +454,10 @@ multiples =
                             (basicNumericState defaults))))
                    (Generated
                       { generatedView =
-                          "<input pattern=\"[0-9]*\" value=\"2\" name=\"/s/m/\" type=\"text\">\
-                          \<input pattern=\"[0-9]*\" value=\"666\" name=\"/i/1/l/m/\" type=\"text\">\
+                          "<input pattern=\"-?[0-9]*\" value=\"2\" name=\"/s/m/\" type=\"text\">\
+                          \<input pattern=\"-?[0-9]*\" value=\"666\" name=\"/i/1/l/m/\" type=\"text\">\
                           \<input value=\"Hello!\" name=\"/i/1/r/\">\
-                          \<input pattern=\"[0-9]*\" value=\"123\" name=\"/i/2/l/m/\" type=\"text\">\
+                          \<input pattern=\"-?[0-9]*\" value=\"123\" name=\"/i/2/l/m/\" type=\"text\">\
                           \<input value=\"World!\" name=\"/i/2/r/\">"
                       , generatedValue =
                           Success [(666, "Hello!"), (123, "World!")]
