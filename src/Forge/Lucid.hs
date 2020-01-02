@@ -44,6 +44,7 @@ data Field a where
   TextField :: Maybe Text -> Field Text
   IntegerField :: Maybe Integer -> Field Integer
   MultiselectField :: Eq a => Maybe [a] -> NonEmpty (a, Text) -> Field [a]
+  DropdownField :: Eq a => Maybe a -> NonEmpty (a, Text) -> Field a
   EmailField :: Maybe EmailAddress -> Field EmailAddress
 
 --------------------------------------------------------------------------------
@@ -92,6 +93,27 @@ instance (Forge.FormError error) =>
                  Just ok -> pure ok)
             keys
         pure (toList values)
+        where keyedChoices =
+                map
+                  (\(i, (value, title)) -> (uniqueKey i title, value))
+                  (zip [0 :: Integer ..] (toList choices))
+      DropdownField _ choices -> do
+        keys <-
+          mapM
+            (\case
+               (Forge.TextInput text) -> Right text
+               _ -> Left (Forge.invalidInputFormat key input))
+            input
+        values <-
+          mapM
+            (\k ->
+               case lookup k keyedChoices of
+                 Nothing -> Left (Forge.invalidInputFormat key input)
+                 Just ok -> pure ok)
+            keys
+        case listToMaybe (toList values) of
+          Nothing -> Left (Forge.missingInputError key)
+          Just a -> pure a
         where keyedChoices =
                 map
                   (\(i, (value, title)) -> (uniqueKey i title, value))
@@ -146,6 +168,29 @@ instance (Forge.FormError error) =>
                        case mdef of
                          Just defaults
                            | elem a defaults -> [Lucid.selected_ "selected"]
+                         _ -> [])
+                  (Lucid.toHtml label))
+             (zip [0 :: Integer ..] (toList choices)))
+      DropdownField mdef choices ->
+        Lucid.select_
+          [Lucid.name_ (Forge.unKey key)]
+          (mapM_
+             (\(i, (a, label)) ->
+                Lucid.option_
+                  ([Lucid.value_ (uniqueKey i label)] <>
+                   case minput of
+                     Just inputs
+                       | elem
+                          (uniqueKey i label)
+                          (mapMaybe
+                             (\case
+                                Forge.TextInput s -> pure s
+                                _ -> Nothing)
+                             (toList inputs)) -> [Lucid.selected_ "selected"]
+                     _ ->
+                       case mdef of
+                         Just default'
+                           | a == default' -> [Lucid.selected_ "selected"]
                          _ -> [])
                   (Lucid.toHtml label))
              (zip [0 :: Integer ..] (toList choices)))
