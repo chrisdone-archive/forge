@@ -50,6 +50,7 @@ data Field a where
   DropdownField :: Eq a => Maybe a -> NonEmpty (a, Text) -> Field a
   EmailField :: Maybe EmailAddress -> Field EmailAddress
   FixedField :: HasResolution a => Maybe (Fixed a) -> Field (Fixed a)
+  PhoneField :: Maybe Text -> Field Text
 
 --------------------------------------------------------------------------------
 -- Instantiation of classes
@@ -68,6 +69,10 @@ instance (Forge.FormError error) =>
         case input of
           Forge.TextInput text :| [] -> pure text
           _ -> Left (Forge.invalidInputFormat key input)
+      PhoneField _ ->
+        case input of
+          Forge.TextInput phone :| [] -> pure phone
+          _ -> Left (Forge.invalidInputFormat key input)
       IntegerField _ ->
         case input of
           Forge.TextInput text :| [] ->
@@ -75,6 +80,7 @@ instance (Forge.FormError error) =>
               Just i -> pure i
               Nothing -> Left (Forge.invalidInputFormat key input)
           _ -> Left (Forge.invalidInputFormat key input)
+
       FixedField _ ->
         case input of
           Forge.TextInput text :| [] ->
@@ -134,6 +140,13 @@ instance (Forge.FormError error) =>
       TextField mdef ->
         Lucid.input_
           ([Lucid.name_ (Forge.unKey key)] <>
+           [ Lucid.value_ value
+           | Just (Forge.TextInput value :| []) <-
+               [minput <|> fmap (pure . Forge.TextInput) mdef]
+           ])
+      PhoneField mdef ->
+        Lucid.input_
+          ([Lucid.name_ (Forge.unKey key), Lucid.type_ "tel"] <>
            [ Lucid.value_ value
            | Just (Forge.TextInput value :| []) <-
                [minput <|> fmap (pure . Forge.TextInput) mdef]
