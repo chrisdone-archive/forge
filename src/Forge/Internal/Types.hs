@@ -56,49 +56,53 @@ import           Data.Validation
 data Form index (parse :: * -> *) view (field :: * -> *) error a where
   -- | Produce a pure value.
   ValueForm
-    :: a
+    :: a -- ^ A pure value to produce.
     -> Form index parse view field error a
   -- | Map over the value. This mirrors 'fmap'.
   MapValueForm
-    :: (a -> b)
-    -> Form index parse view field error a
+    :: (a -> b) -- ^ Function to map over the value in form.
+    -> Form index parse view field error a -- ^ Form to transform.
     -> Form index parse view field error b
   -- | Map over the error type.
   MapErrorForm
     :: (FormError errorA, FormField view field errorA)
-    => (errorA -> errorB)
-    -> Form index parse view field errorA a
-    -> Form index parse view field errorB a
+    => (errorA -> errorB) -- ^ Map over the error.
+    -> Form index parse view field errorA a -- ^ Original form.
+    -> Form index parse view field errorB a -- ^ Form with new error type.
   -- | Applicative application of a function to a value. Notice that
   -- this mirrors '<*>' or 'Control.Monad.ap'.
   ApValueForm
-    :: Form index parse view field error (a -> b)
-    -> Form index parse view field error a
+    :: Form index parse view field error (a -> b) -- ^ Function-producing form.
+    -> Form index parse view field error a -- ^ Argument form.
     -> Form index parse view field error b
   -- | Embed a view in a form, such as a label or some text.
   ViewForm
-    :: view
-    -> Form index parse view field error ()
+    :: view -- ^ A view (e.g. html) to embed.
+    -> Form index parse view field error () -- ^ A form that just displays that view.
   -- | A terminal node in the form tree that represents a field; a
   -- producer of values (aside from 'ValueForm'), from user input.
   FieldForm
-    :: FieldName index
-    -> field a
-    -> Form index parse view field error a
+    :: FieldName index -- ^ Name of the field.
+    -> field a -- ^ The field.
+    -> Form index parse view field error a -- ^ Form representing that field.
   -- | Parse a form's result.
   ParseForm
-    :: (x -> parse (Either error a))
-    -> Form index parse view field error x
+    :: (x -> parse (Either error a)) -- ^ Run a parser in @parse@ and produce @error@ or the value.
+    -> Form index parse view field error x -- ^ Form whose result we will parse.
     -> Form index parse view field error a
   -- | Transform a form's view using the error from above.
   FloorForm
     :: (Maybe error -> view -> (view, Maybe error))
+    -- ^ Transforms view below using error, if any, from above.
     -> Form index parse view field error a
+    -- ^ Form whose errors we are not interested in.
     -> Form index parse view field error a
   -- | Transform a form's view using errors from below.
   CeilingForm
     :: ([error] -> view -> (view, [error]))
+    -- ^ Transform the errors coming from below.
     -> Form index parse view field error a
+    -- ^ Form that bubbles errors up.
     -> Form index parse view field error a
   -- | Many formlets.
   ManyForm
