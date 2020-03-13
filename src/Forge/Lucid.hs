@@ -85,7 +85,6 @@ instance (Forge.FormError error) =>
               Just i -> pure i
               Nothing -> Left (Forge.invalidInputFormat key input)
           _ -> Left (Forge.invalidInputFormat key input)
-
       FixedField _ ->
         case input of
           Forge.TextInput text :| [] ->
@@ -150,12 +149,14 @@ instance (Forge.FormError error) =>
                [minput <|> fmap (pure . Forge.TextInput) mdef]
            ])
       TextareaField mdef ->
-        Lucid.input_
-          ([Lucid.name_ (Forge.unKey key)] <>
-           [ Lucid.value_ value
-           | Just (Forge.TextInput value :| []) <-
-               [minput <|> fmap (pure . Forge.TextInput) mdef]
-           ])
+        Lucid.textarea_
+          ([Lucid.name_ (Forge.unKey key)])
+          (maybe
+             mempty
+             (\case
+                Forge.TextInput value :| [] -> Lucid.toHtml value
+                _ -> mempty)
+             (minput <|> fmap (pure . Forge.TextInput) mdef))
       PhoneField mdef ->
         Lucid.input_
           ([Lucid.name_ (Forge.unKey key), Lucid.type_ "tel"] <>
