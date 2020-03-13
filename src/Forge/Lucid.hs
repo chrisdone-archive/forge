@@ -45,6 +45,7 @@ data Error
 -- | A standard Html5 field.
 data Field a where
   TextField :: Maybe Text -> Field Text
+  PasswordField :: Maybe Text -> Field Text
   TextareaField :: Maybe Text -> Field Text
   IntegerField :: Maybe Integer -> Field Integer
   MultiselectField :: Eq a => Maybe [a] -> NonEmpty (a, Text) -> Field [a]
@@ -67,6 +68,10 @@ instance (Forge.FormError error) =>
   parseFieldInput key field input =
     case field of
       TextField _ ->
+        case input of
+          Forge.TextInput text :| [] -> pure text
+          _ -> Left (Forge.invalidInputFormat key input)
+      PasswordField _ ->
         case input of
           Forge.TextInput text :| [] -> pure text
           _ -> Left (Forge.invalidInputFormat key input)
@@ -144,6 +149,13 @@ instance (Forge.FormError error) =>
       TextField mdef ->
         Lucid.input_
           ([Lucid.name_ (Forge.unKey key)] <>
+           [ Lucid.value_ value
+           | Just (Forge.TextInput value :| []) <-
+               [minput <|> fmap (pure . Forge.TextInput) mdef]
+           ])
+      PasswordField mdef ->
+        Lucid.input_
+          ([Lucid.type_ "password", Lucid.name_ (Forge.unKey key)] <>
            [ Lucid.value_ value
            | Just (Forge.TextInput value :| []) <-
                [minput <|> fmap (pure . Forge.TextInput) mdef]
