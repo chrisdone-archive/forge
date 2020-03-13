@@ -45,6 +45,7 @@ data Error
 -- | A standard Html5 field.
 data Field a where
   TextField :: Maybe Text -> Field Text
+  TextareaField :: Maybe Text -> Field Text
   IntegerField :: Maybe Integer -> Field Integer
   MultiselectField :: Eq a => Maybe [a] -> NonEmpty (a, Text) -> Field [a]
   DropdownField :: Eq a => Maybe a -> NonEmpty (a, Text) -> Field a
@@ -68,6 +69,10 @@ instance (Forge.FormError error) =>
       TextField _ ->
         case input of
           Forge.TextInput text :| [] -> pure text
+          _ -> Left (Forge.invalidInputFormat key input)
+      TextareaField _ ->
+        case input of
+          Forge.TextInput textarea :| [] -> pure textarea
           _ -> Left (Forge.invalidInputFormat key input)
       PhoneField _ ->
         case input of
@@ -138,6 +143,13 @@ instance (Forge.FormError error) =>
   viewField key minput =
     \case
       TextField mdef ->
+        Lucid.input_
+          ([Lucid.name_ (Forge.unKey key)] <>
+           [ Lucid.value_ value
+           | Just (Forge.TextInput value :| []) <-
+               [minput <|> fmap (pure . Forge.TextInput) mdef]
+           ])
+      TextareaField mdef ->
         Lucid.input_
           ([Lucid.name_ (Forge.unKey key)] <>
            [ Lucid.value_ value
