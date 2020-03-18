@@ -54,7 +54,7 @@ data Field a where
     :: Eq a
     => Maybe a
     -> NonEmpty (a, Text)
-    -> (Integer -> Lucid.Html () -> Lucid.Html () -> Lucid.Html ())
+    -> (Integer -> Bool -> Lucid.Html () -> Lucid.Html () -> Lucid.Html ())
     -> Field a
   EmailField :: Maybe EmailAddress -> Field EmailAddress
   FixedField :: HasResolution a => Maybe (Fixed a) -> Field (Fixed a)
@@ -283,13 +283,7 @@ instance (Forge.FormError error) =>
       RadioGroupField mdef choices render ->
         mapM_
           (\(i, (a, label)) ->
-             render
-               i
-               (Lucid.input_
-                  ([ Lucid.type_ "radio"
-                   , Lucid.value_ (uniqueKey i label)
-                   , Lucid.name_ (Forge.unKey key)
-                   ] <>
+             let checked =
                    case minput of
                      Just inputs
                        | elem
@@ -298,13 +292,24 @@ instance (Forge.FormError error) =>
                              (\case
                                 Forge.TextInput s -> pure s
                                 _ -> Nothing)
-                             (toList inputs)) -> [Lucid.checked_]
+                             (toList inputs)) -> True
                      _ ->
                        case mdef of
                          Just default'
-                           | a == default' -> [Lucid.checked_]
-                         _ -> [])
-                  ) (Lucid.toHtml label))
+                           | a == default' -> True
+                         _ -> False
+              in render
+                   i
+                   checked
+                   (Lucid.input_
+                      ([ Lucid.type_ "radio"
+                       , Lucid.value_ (uniqueKey i label)
+                       , Lucid.name_ (Forge.unKey key)
+                       ] <>
+                       if checked
+                         then [Lucid.checked_]
+                         else []))
+                   (Lucid.toHtml label))
           (zip [0 :: Integer ..] (toList choices))
 
 -- | A key which is unique with respect to a list index and its display.
