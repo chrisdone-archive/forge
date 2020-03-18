@@ -50,6 +50,12 @@ data Field a where
   IntegerField :: Maybe Integer -> Field Integer
   MultiselectField :: Eq a => Maybe [a] -> NonEmpty (a, Text) -> Field [a]
   DropdownField :: Eq a => Maybe a -> NonEmpty (a, Text) -> Field a
+  RadioGroupField
+    :: Eq a
+    => Maybe a
+    -> NonEmpty (a, Text)
+    -> (Integer -> Lucid.Html () -> Lucid.Html () -> Lucid.Html ())
+    -> Field a
   EmailField :: Maybe EmailAddress -> Field EmailAddress
   FixedField :: HasResolution a => Maybe (Fixed a) -> Field (Fixed a)
   PhoneField :: Maybe Text -> Field Text
@@ -124,6 +130,27 @@ instance (Forge.FormError error) =>
                   (\(i, (value, title)) -> (uniqueKey i title, value))
                   (zip [0 :: Integer ..] (toList choices))
       DropdownField _ choices -> do
+        keys <-
+          mapM
+            (\case
+               (Forge.TextInput text) -> Right text
+               _ -> Left (Forge.invalidInputFormat key input))
+            input
+        values <-
+          mapM
+            (\k ->
+               case lookup k keyedChoices of
+                 Nothing -> Left (Forge.invalidInputFormat key input)
+                 Just ok -> pure ok)
+            keys
+        case listToMaybe (toList values) of
+          Nothing -> Left (Forge.missingInputError key)
+          Just a -> pure a
+        where keyedChoices =
+                map
+                  (\(i, (value, title)) -> (uniqueKey i title, value))
+                  (zip [0 :: Integer ..] (toList choices))
+      RadioGroupField _ choices _render -> do
         keys <-
           mapM
             (\case
@@ -253,6 +280,32 @@ instance (Forge.FormError error) =>
                          _ -> [])
                   (Lucid.toHtml label))
              (zip [0 :: Integer ..] (toList choices)))
+      RadioGroupField mdef choices render ->
+        mapM_
+          (\(i, (a, label)) ->
+             render
+               i
+               (Lucid.input_
+                  ([ Lucid.type_ "radio"
+                   , Lucid.value_ (uniqueKey i label)
+                   , Lucid.name_ (Forge.unKey key)
+                   ] <>
+                   case minput of
+                     Just inputs
+                       | elem
+                          (uniqueKey i label)
+                          (mapMaybe
+                             (\case
+                                Forge.TextInput s -> pure s
+                                _ -> Nothing)
+                             (toList inputs)) -> [Lucid.checked_]
+                     _ ->
+                       case mdef of
+                         Just default'
+                           | a == default' -> [Lucid.checked_]
+                         _ -> [])
+                  ) (Lucid.toHtml label))
+          (zip [0 :: Integer ..] (toList choices))
 
 -- | A key which is unique with respect to a list index and its display.
 uniqueKey :: Integer -> Text -> Text
