@@ -28,6 +28,7 @@ import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
+import           Data.Time
 import qualified Forge.Internal.Types as Forge
 import qualified Lucid
 import           Text.Email.Validate as Email
@@ -46,6 +47,7 @@ data Error
 data Field a where
   TextField :: Maybe Text -> Field Text
   PasswordField :: Maybe Text -> Field Text
+  DateField :: Maybe Day -> Field Day
   TextareaField :: Maybe Text -> Field Text
   IntegerField :: Maybe Integer -> Field Integer
   CheckboxField :: Maybe Bool -> Field Bool
@@ -88,6 +90,13 @@ instance (Forge.FormError error) =>
       PasswordField _ ->
         case input of
           Forge.TextInput text :| [] -> pure text
+          _ -> Left (Forge.invalidInputFormat key input)
+      DateField _ ->
+        case input of
+          Forge.TextInput text :| [] ->
+            case parseDate text of
+              Just date -> pure date
+              Nothing -> Left (Forge.invalidInputFormat key input)
           _ -> Left (Forge.invalidInputFormat key input)
       TextareaField _ ->
         case input of
@@ -181,6 +190,21 @@ instance (Forge.FormError error) =>
                   (zip [0 :: Integer ..] (toList choices))
   viewField key minput =
     \case
+      DateField mdef ->
+        Lucid.input_
+          [ Lucid.type_ "date"
+          , Lucid.name_ (Forge.unKey key)
+          , Lucid.value_
+              (let mdate =
+                     case minput of
+                       Just (Forge.TextInput text :| []) ->
+                         case parseDate text of
+                           Just date -> Just date
+                           Nothing -> Nothing
+                       Just _ -> Nothing
+                       Nothing -> mdef
+                in maybe "" showDate mdate)
+          ]
       CheckboxField mdef -> do
         Lucid.input_
           [ Lucid.type_ "hidden"
@@ -354,3 +378,10 @@ readFixed s = do
     (null rhs ||
      (all isDigit (drop 1 rhs) && (10 ^ length (drop 1 rhs)) <= resolution fixed))
   pure fixed
+
+-- | Parse a valid date.
+parseDate :: Text -> Maybe Day
+parseDate t = parseTimeM True defaultTimeLocale "%Y-%m-%d" (T.unpack t)
+
+showDate :: Day -> Text
+showDate = T.pack . formatTime defaultTimeLocale "%Y-%m-%d"
