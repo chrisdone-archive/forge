@@ -48,6 +48,7 @@ data Field a where
   PasswordField :: Maybe Text -> Field Text
   TextareaField :: Maybe Text -> Field Text
   IntegerField :: Maybe Integer -> Field Integer
+  CheckboxField :: Maybe Bool -> Field Bool
   MultiselectField :: Eq a => Maybe [a] -> NonEmpty (a, Text) -> Field [a]
   DropdownField :: Eq a => Maybe a -> NonEmpty (a, Text) -> Field a
   RadioGroupField
@@ -73,6 +74,13 @@ instance (Forge.FormError error) =>
          Forge.FormField (Lucid.Html ()) Field error where
   parseFieldInput key field input =
     case field of
+      CheckboxField _ ->
+        pure
+          (any
+             (\case
+                Forge.TextInput "true" -> True
+                _ -> False)
+             (toList input))
       TextField _ ->
         case input of
           Forge.TextInput text :| [] -> pure text
@@ -173,6 +181,27 @@ instance (Forge.FormError error) =>
                   (zip [0 :: Integer ..] (toList choices))
   viewField key minput =
     \case
+      CheckboxField mdef -> do
+        Lucid.input_
+          [ Lucid.type_ "hidden"
+          , Lucid.name_ (Forge.unKey key)
+          , Lucid.value_ "false"
+          ]
+        Lucid.input_
+          ([ Lucid.type_ "checkbox"
+           , Lucid.name_ (Forge.unKey key)
+           , Lucid.value_ "true"
+           ] <>
+           (case minput of
+              Nothing -> [Lucid.checked_ | mdef == Just True]
+              Just input ->
+                [ Lucid.checked_
+                | any
+                    (\case
+                       Forge.TextInput "true" -> True
+                       _ -> False)
+                    (toList input)
+                ]))
       TextField mdef ->
         Lucid.input_
           ([Lucid.name_ (Forge.unKey key)] <>
