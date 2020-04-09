@@ -83,7 +83,7 @@ instance (Forge.FormError error) =>
 
 -- | Used to be replaced with @key@ in the virtual-dom library.
 virtualDomDataAttributeName :: Text
-virtualDomDataAttributeName = "lucid-virtual-dom-key"
+virtualDomDataAttributeName = "key"
 
 parseFieldInput' ::
      Forge.FormError e
