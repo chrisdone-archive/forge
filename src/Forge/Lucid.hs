@@ -82,7 +82,7 @@ instance (Forge.FormError error) =>
 
 -- | Used to be replaced with @key@ in the virtual-dom library.
 vdomkey_ :: Text -> Lucid.Attribute
-vdomkey_ = Lucid.Base.makeAttribute "data-key"
+vdomkey_ = Lucid.Base.makeAttribute vdomkeyAttributeName
 
 -- | Used to be replaced with @key@ in the virtual-dom library.
 vdomkeyAttributeName :: Text
