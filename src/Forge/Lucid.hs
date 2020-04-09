@@ -76,10 +76,7 @@ instance Forge.FormError Error where
 instance (Forge.FormError error) =>
          Forge.FormField (Lucid.Html ()) Field error where
   parseFieldInput key field input = parseFieldInput' key field input
-  viewField key@(Forge.Key text) minput = wrapKey . viewField' key minput
-    where
-      wrapKey inner =
-        Lucid.with inner [Lucid.data_ virtualDomDataAttributeName text]
+  viewField key minput = viewField' key minput
 
 -- | Used to be replaced with @key@ in the virtual-dom library.
 virtualDomDataAttributeName :: Text
@@ -214,6 +211,7 @@ viewField' key minput =
       Lucid.input_
         [ Lucid.type_ "date"
         , Lucid.name_ (Forge.unKey key)
+        , Lucid.data_ virtualDomDataAttributeName (Forge.unKey key)
         , Lucid.value_
             (let mdate =
                    case minput of
@@ -229,11 +227,13 @@ viewField' key minput =
       Lucid.input_
         [ Lucid.type_ "hidden"
         , Lucid.name_ (Forge.unKey key)
+        , Lucid.data_ virtualDomDataAttributeName (Forge.unKey key <> "/hidden")
         , Lucid.value_ "false"
         ]
       Lucid.input_
         ([ Lucid.type_ "checkbox"
          , Lucid.name_ (Forge.unKey key)
+         , Lucid.data_ virtualDomDataAttributeName (Forge.unKey key <> "/checkbox")
          , Lucid.value_ "true"
          ] <>
          (case minput of
@@ -248,21 +248,28 @@ viewField' key minput =
               ]))
     TextField mdef ->
       Lucid.input_
-        ([Lucid.name_ (Forge.unKey key)] <>
+        ([ Lucid.name_ (Forge.unKey key)
+         , Lucid.data_ virtualDomDataAttributeName (Forge.unKey key)
+         ] <>
          [ Lucid.value_ value
          | Just (Forge.TextInput value :| []) <-
              [minput <|> fmap (pure . Forge.TextInput) mdef]
          ])
     PasswordField mdef ->
       Lucid.input_
-        ([Lucid.type_ "password", Lucid.name_ (Forge.unKey key)] <>
+        ([ Lucid.type_ "password"
+         , Lucid.name_ (Forge.unKey key)
+         , Lucid.data_ virtualDomDataAttributeName (Forge.unKey key)
+         ] <>
          [ Lucid.value_ value
          | Just (Forge.TextInput value :| []) <-
              [minput <|> fmap (pure . Forge.TextInput) mdef]
          ])
     TextareaField mdef ->
       Lucid.textarea_
-        ([Lucid.name_ (Forge.unKey key)])
+        ([ Lucid.name_ (Forge.unKey key)
+         , Lucid.data_ virtualDomDataAttributeName (Forge.unKey key)
+         ])
         (maybe
            mempty
            (\case
@@ -271,14 +278,20 @@ viewField' key minput =
            (minput <|> fmap (pure . Forge.TextInput) mdef))
     PhoneField mdef ->
       Lucid.input_
-        ([Lucid.name_ (Forge.unKey key), Lucid.type_ "tel"] <>
+        ([ Lucid.name_ (Forge.unKey key)
+         , Lucid.data_ virtualDomDataAttributeName (Forge.unKey key)
+         , Lucid.type_ "tel"
+         ] <>
          [ Lucid.value_ value
          | Just (Forge.TextInput value :| []) <-
              [minput <|> fmap (pure . Forge.TextInput) mdef]
          ])
     EmailField mdef ->
       Lucid.input_
-        ([Lucid.name_ (Forge.unKey key), Lucid.type_ "email"] <>
+        ([ Lucid.name_ (Forge.unKey key)
+         , Lucid.data_ virtualDomDataAttributeName (Forge.unKey key)
+         , Lucid.type_ "email"
+         ] <>
          [ Lucid.value_ value
          | Just (Forge.TextInput value :| []) <-
              [ minput <|>
@@ -290,6 +303,7 @@ viewField' key minput =
     IntegerField mdef ->
       Lucid.input_
         ([ Lucid.name_ (Forge.unKey key)
+         , Lucid.data_ virtualDomDataAttributeName (Forge.unKey key)
          , Lucid.type_ "text"
          , Lucid.pattern_ "-?[0-9]*"
          ] <>
@@ -300,6 +314,7 @@ viewField' key minput =
     FixedField mdef ->
       Lucid.input_
         ([ Lucid.name_ (Forge.unKey key)
+         , Lucid.data_ virtualDomDataAttributeName (Forge.unKey key)
          , Lucid.type_ "text"
          , Lucid.pattern_ "-?[0-9.]*"
          ] <>
@@ -309,11 +324,18 @@ viewField' key minput =
          ])
     MultiselectField mdef choices ->
       Lucid.select_
-        ([Lucid.name_ (Forge.unKey key), Lucid.multiple_ "multiple"])
+        ([ Lucid.name_ (Forge.unKey key)
+         , Lucid.data_ virtualDomDataAttributeName (Forge.unKey key)
+         , Lucid.multiple_ "multiple"
+         ])
         (mapM_
            (\(i, (a, label)) ->
               Lucid.option_
-                ([Lucid.value_ (uniqueKey i label)] <>
+                ([ Lucid.value_ (uniqueKey i label)
+                 , Lucid.data_
+                     virtualDomDataAttributeName
+                     (Forge.unKey key <> "/" <> uniqueKey i label)
+                 ] <>
                  case minput of
                    Just inputs
                      | elem
@@ -332,11 +354,17 @@ viewField' key minput =
            (zip [0 :: Integer ..] (toList choices)))
     DropdownField mdef choices ->
       Lucid.select_
-        [Lucid.name_ (Forge.unKey key)]
+        [ Lucid.name_ (Forge.unKey key)
+        , Lucid.data_ virtualDomDataAttributeName (Forge.unKey key)
+        ]
         (mapM_
            (\(i, (a, label)) ->
               Lucid.option_
-                ([Lucid.value_ (uniqueKey i label)] <>
+                ([ Lucid.value_ (uniqueKey i label)
+                 , Lucid.data_
+                     virtualDomDataAttributeName
+                     (Forge.unKey key <> "/" <> uniqueKey i label)
+                 ] <>
                  case minput of
                    Just inputs
                      | elem
@@ -378,6 +406,9 @@ viewField' key minput =
                     ([ Lucid.type_ "radio"
                      , Lucid.value_ (uniqueKey i label)
                      , Lucid.name_ (Forge.unKey key)
+                     , Lucid.data_
+                         virtualDomDataAttributeName
+                         (Forge.unKey key <> "/" <> uniqueKey i label)
                      ] <>
                      if checked
                        then [Lucid.checked_]
