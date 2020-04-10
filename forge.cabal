@@ -24,7 +24,6 @@ library
       Forge
       Forge.Generate
       Forge.Types
-      Forge.Lucid
       Forge.Verify
       Forge.Internal.Types
   other-modules:
@@ -33,10 +32,7 @@ library
       src
   build-depends:
       base >=4.7 && <5, containers, text, transformers, mtl, lucid, validation, th-orphans,
-      template-haskell, th-lift,
-      -- lucid requirements
-      email-validate
-    , time
+      template-haskell, th-lift
   default-language: Haskell2010
 
 test-suite forge-test
