@@ -64,14 +64,23 @@ generate inputs = go PathBegin . unVerifiedForm
         ApValueForm f x ->
           (<*>) <$> go (path . InApLeft) f <*> go (path . InApRight) x
         ViewForm m -> pure (pureView m)
-        FieldForm name m -> do
+        FieldForm name required def m -> do
           field <- pure m
           let key =
                 case name of
                   DynamicFieldName -> pathToKey (path PathEnd)
                   StaticFieldName text -> Key text
               minput = M.lookup key inputs
-              generatedView = viewField @view @field @err key minput field
+              generatedView =
+                viewField
+                  @view
+                  @field
+                  @err
+                  key
+                  required
+                  (defaultMaybe def)
+                  minput
+                  field
           case minput of
             Nothing ->
               pure
@@ -80,7 +89,7 @@ generate inputs = go PathBegin . unVerifiedForm
                    , generatedView
                    })
             Just input ->
-              case parseFieldInput @view @field @err key field input of
+              case parseFieldInput @view @field @err key required input field of
                 Left errorIndexed ->
                   pure
                     (Generated
@@ -203,15 +212,23 @@ viewWithError inputs = go
             (go errs (path . InManySet) setForm)
             (map
                (\(i, a) -> go errs (path . InManyIndex i) (itemForm (pure a)))
-               (zip [1..] defaults))
+               (zip [1 ..] defaults))
         MapErrorForm _ form -> go Nothing (path . InMapError) form
         MapValueForm _ form -> go errs (path . InMapValue) form
         CeilingForm f form -> fst (f [] (go errs (path . InCeiling) form))
         ApValueForm f x ->
           go errs (path . InApLeft) f <> go errs (path . InApRight) x
         ViewForm m -> m
-        FieldForm name m ->
-          viewField @view @field @error key (M.lookup key inputs) m
+        FieldForm name required def m ->
+          viewField
+            @view
+            @field
+            @error
+            key
+            required
+            (defaultMaybe def)
+            (M.lookup key inputs)
+            m
           where key =
                   case name of
                     DynamicFieldName -> pathToKey (path PathEnd)

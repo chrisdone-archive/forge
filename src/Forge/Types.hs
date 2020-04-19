@@ -8,6 +8,7 @@ module Forge.Types
   , FormField
   , Generated
   , Input(..)
+  , Default
   ) where
 
 import Forge.Internal.Types

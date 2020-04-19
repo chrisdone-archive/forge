@@ -33,6 +33,13 @@ module Forge.Internal.Types
   , Input(..)
   , Key(..)
   , Path(..)
+  , Default(..)
+  , defaultMaybe
+  , noDefault
+  , FieldRequired(..)
+  , RequiredT(..)
+  , FieldResult
+  , maybeDefault
   ) where
 
 import           Data.List.NonEmpty (NonEmpty(..))
@@ -83,8 +90,10 @@ data Form index (parse :: * -> *) view (field :: * -> *) error a where
   -- producer of values (aside from 'ValueForm'), from user input.
   FieldForm
     :: FieldName index -- ^ Name of the field.
+    -> FieldRequired r -- ^ Is the field required?
+    -> Default a -- ^ Default value for the field.
     -> field a -- ^ The field.
-    -> Form index parse view field error a -- ^ Form representing that field.
+    -> Form index parse view field error (FieldResult r a) -- ^ Form representing that field.
   -- | Parse a form's result.
   ParseForm
     :: (x -> parse (Either error a)) -- ^ Run a parser in @parse@ and produce @error@ or the value.
@@ -146,6 +155,21 @@ instance (index ~ 'Unverified) => IsString (FieldName index) where
   fromString = StaticFieldName . fromString
 
 --------------------------------------------------------------------------------
+-- Defaults
+
+newtype Default a = Default { unDefault :: Maybe a}
+  deriving (Functor, Show, Applicative, Semigroup, Monoid)
+
+defaultMaybe :: Default a -> Maybe a
+defaultMaybe = unDefault
+
+maybeDefault :: Maybe a -> Default a
+maybeDefault = Default
+
+noDefault :: Default a
+noDefault = Default Nothing
+
+--------------------------------------------------------------------------------
 -- $type-classes
 --
 -- Type classes used by the form type.
@@ -157,13 +181,36 @@ data FormIndex
 
 -- | The type of field used in the form.
 class FormField view field error where
-  parseFieldInput :: FormError error => Key -> field a -> NonEmpty Input -> Either error a
-  viewField :: Key -> Maybe (NonEmpty Input) -> field a -> view
+  parseFieldInput ::
+       FormError error
+    => Key
+    -> FieldRequired r
+    -> NonEmpty Input
+    -> field a
+    -> Either error (FieldResult r a)
+  viewField ::
+       Key
+    -> FieldRequired r
+    -> Maybe a
+    -> Maybe (NonEmpty Input)
+    -> field a
+    -> view
 
 -- | The error type of the form.
 class FormError error where
    missingInputError :: Key -> error
    invalidInputFormat :: Key -> NonEmpty Input -> error
+
+data RequiredT = RequiredT | OptionalT
+
+data FieldRequired a where
+  RequiredField :: FieldRequired 'RequiredT
+  OptionalField :: FieldRequired 'OptionalT
+deriving instance Show (FieldRequired a)
+
+type family FieldResult r a where
+  FieldResult 'RequiredT a = a
+  FieldResult 'OptionalT a = Maybe a
 
 --------------------------------------------------------------------------------
 -- $generated

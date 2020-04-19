@@ -20,7 +20,9 @@ module Forge.Verify
   ( -- * Static Verification
     -- $static-verification
     verified
+  , verified1
   , verify
+  , verify1
     -- * Dynamic verification
     -- $dynamic-verification
   , maybeVerify
@@ -71,6 +73,15 @@ verified ::
   -- ^ A wrapped version of the form.
 verified = VerifiedForm
 
+-- | A form whose invariants are verified in the type system can be
+-- immediately converted to a verified form.
+verified1 ::
+     (Default a -> Form 'Verified parse view field error a)
+     -- ^ A form which is already verified carries the proof.
+  -> (Default a -> VerifiedForm 'Verified parse view field error a)
+  -- ^ A wrapped version of the form.
+verified1 f = VerifiedForm . f
+
 -- | Smart constructor: verify the form at runtime.
 maybeVerify ::
      Form index parse view field error a
@@ -108,6 +119,34 @@ verify q = do
    ||]
   where name = 'VerifiedForm
 
+-- | Verify a form that takes an arg and that needs verification at compile-time. Example:
+--
+-- @
+-- '$$'($$(verify1 [|| myform ||]))
+-- @
+verify1 ::
+     Q (TExp (Default a -> Form index parse view field error a))
+     -- ^ A typed quoted expression representing the form, e.g.
+     --
+     -- @
+     -- [|| myform ||]
+     -- @
+  -> Q (TExp (Q (TExp (Default a -> VerifiedForm index parse view field error a))))
+  -- ^ Two layers of expression generators. Unpack it via
+  --
+  -- @
+  -- '$$'($$(..))
+  -- @
+verify1 q = do
+  TExp expr <- q
+  [|| case runVerification ($$(q) noDefault) of
+        VerifiedResult ->
+          TExp <$> lamE [varP (mkName "arg")] (appE (conE name) (appE (pure expr) (varE (mkName "arg"))))
+        DuplicateField field -> error ("Duplicate field: " <> T.unpack field)
+   ||]
+  where name = 'VerifiedForm
+
+
 -- | Run verification on the form.
 runVerification :: Form index parse view field error a -> VerificationResult
 runVerification =
@@ -128,7 +167,7 @@ runVerification =
         ApValueForm f x -> go f >> go x
         ViewForm {} -> pure ()
         ParseForm _ f -> go f
-        FieldForm name _ -> do
+        FieldForm name _ _ _ -> do
           seen <- get
           case name of
             StaticFieldName text ->
