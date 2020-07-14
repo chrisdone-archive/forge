@@ -42,10 +42,11 @@ module Forge.Internal.Types
   , maybeDefault
   ) where
 
-import           Data.List.NonEmpty (NonEmpty(..))
-import           Data.String
-import           Data.Text (Text)
-import           Data.Validation
+import Data.Functor.Identity
+import Data.List.NonEmpty (NonEmpty(..))
+import Data.String
+import Data.Text (Text)
+import Data.Validation
 
 -- | A form indexed by some type @index@ (a phantom type), returning a
 -- value @a@.
@@ -119,7 +120,7 @@ data Form index (parse :: * -> *) view (field :: * -> *) error a where
     -- ^ The set's view, the items' views, and produce a final view.
     -> Form index parse view field error [Integer]
     -- ^ The set.
-    -> (Maybe a -> Form index parse view field error a)
+    -> (Default a -> Form index parse view field error a)
     -- ^ An individual item formlet.
     -> [a]
     -- ^ Defaults.
@@ -153,6 +154,13 @@ data FieldName index where
 
 instance (index ~ 'Unverified) => IsString (FieldName index) where
   fromString = StaticFieldName . fromString
+
+--------------------------------------------------------------------------------
+-- Submitted data
+
+newtype Submitted a = Submitted
+  { unSubmitted :: Identity a
+  } deriving (Functor, Show, Applicative, Semigroup, Monoid)
 
 --------------------------------------------------------------------------------
 -- Defaults

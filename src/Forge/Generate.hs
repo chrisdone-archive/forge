@@ -133,7 +133,7 @@ generate inputs = go PathBegin . unVerifiedForm
             Generated {generatedValue = Success set, generatedView = setView} -> do
               generateds <-
                 traverse
-                  (\idx -> go (path . InManyIndex idx) (itemForm Nothing))
+                  (\idx -> go (path . InManyIndex idx) (itemForm noDefault))
                   set
               let totalGenerated = sequenceA generateds
               pure
