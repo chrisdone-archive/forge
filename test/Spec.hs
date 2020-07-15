@@ -43,6 +43,7 @@ main =
            simpleView
            missingInputs
            invalidInputs
+           inputParsing
            nameStability
            floor
            ceiling
@@ -63,7 +64,7 @@ thTests =
                                            FieldForm (StaticFieldName "bar") RequiredField noDefault (TextField))
                                      in namedForm
                                   ||])))))
-                "<input data-key=\"foo\" pattern=\"-?[0-9]*\" name=\"foo\" type=\"text\" class=\"form-control\"><input data-key=\"bar\" name=\"bar\" class=\"form-control\">")
+                "<input data-key=\"foo\" pattern=\"-?[0-9]*\" name=\"foo\" type=\"text\"><input data-key=\"bar\" name=\"bar\">")
 
 missingInputs :: Spec
 missingInputs = do
@@ -245,7 +246,7 @@ floor =
                                         RequiredField
                                         noDefault
                                         (TextField))))))))))))
-       "<input data-key=\"/p/l/m/f/e/\" value=\"letmein\" name=\"/p/l/m/f/e/\" class=\"form-control\"><p>passwords do not match</p><input data-key=\"/p/r/f/e/\" value=\"letmein!\" name=\"/p/r/f/e/\" class=\"form-control\"><p>passwords do not match</p>")
+       "<input data-key=\"/p/l/m/f/e/\" value=\"letmein\" name=\"/p/l/m/f/e/\"><p>passwords do not match</p><input data-key=\"/p/r/f/e/\" value=\"letmein!\" name=\"/p/r/f/e/\"><p>passwords do not match</p>")
 
 parseFail :: Spec
 parseFail =
@@ -327,7 +328,7 @@ ceiling =
                                   RequiredField
                                   noDefault
                                   (IntegerField))))))))))
-       "<input data-key=\"/c/p/e/\" pattern=\"-?[0-9]*\" value=\"1\" name=\"/c/p/e/\" type=\"text\" class=\"form-control\"><ul><li>number too low!</li></ul>")
+       "<input data-key=\"/c/p/e/\" pattern=\"-?[0-9]*\" value=\"1\" name=\"/c/p/e/\" type=\"text\"><ul><li>number too low!</li></ul>")
 
 nameStability :: Spec
 nameStability =
@@ -349,7 +350,7 @@ nameStability =
                          (const (FieldForm DynamicFieldName RequiredField noDefault (IntegerField)))
                          [1 :: Int .. 1] <*>
                        FieldForm DynamicFieldName RequiredField noDefault (TextField)))))
-             "<input data-key=\"/l/l/m/\" name=\"/l/l/m/\" class=\"form-control\"><input data-key=\"/l/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/l/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/r/\" name=\"/r/\" class=\"form-control\">")
+             "<input data-key=\"/l/l/m/\" name=\"/l/l/m/\"><input data-key=\"/l/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/l/m/\" type=\"text\"><input data-key=\"/r/\" name=\"/r/\">")
         it
           "Sequence 9"
           (shouldBe
@@ -366,7 +367,7 @@ nameStability =
                          (const (FieldForm DynamicFieldName RequiredField noDefault (IntegerField)))
                          [1 :: Int .. 9] <*>
                        FieldForm DynamicFieldName RequiredField noDefault (TextField)))))
-             "<input data-key=\"/l/l/m/\" name=\"/l/l/m/\" class=\"form-control\"><input data-key=\"/l/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/l/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/l/r/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/r/l/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/l/r/r/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/r/r/l/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/l/r/r/r/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/r/r/r/l/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/l/r/r/r/r/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/r/r/r/r/l/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/l/r/r/r/r/r/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/r/r/r/r/r/l/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/l/r/r/r/r/r/r/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/r/r/r/r/r/r/l/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/l/r/r/r/r/r/r/r/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/r/r/r/r/r/r/r/l/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/l/r/r/r/r/r/r/r/r/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/r/r/r/r/r/r/r/r/l/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/r/\" name=\"/r/\" class=\"form-control\">"))
+             "<input data-key=\"/l/l/m/\" name=\"/l/l/m/\"><input data-key=\"/l/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/l/m/\" type=\"text\"><input data-key=\"/l/r/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/r/l/m/\" type=\"text\"><input data-key=\"/l/r/r/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/r/r/l/m/\" type=\"text\"><input data-key=\"/l/r/r/r/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/r/r/r/l/m/\" type=\"text\"><input data-key=\"/l/r/r/r/r/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/r/r/r/r/l/m/\" type=\"text\"><input data-key=\"/l/r/r/r/r/r/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/r/r/r/r/r/l/m/\" type=\"text\"><input data-key=\"/l/r/r/r/r/r/r/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/r/r/r/r/r/r/l/m/\" type=\"text\"><input data-key=\"/l/r/r/r/r/r/r/r/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/r/r/r/r/r/r/r/l/m/\" type=\"text\"><input data-key=\"/l/r/r/r/r/r/r/r/r/r/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/r/r/r/r/r/r/r/r/r/l/m/\" type=\"text\"><input data-key=\"/r/\" name=\"/r/\">"))
 
 simpleView :: SpecWith ()
 simpleView =
@@ -383,7 +384,7 @@ simpleView =
              (verified
                 ((,) <$> FieldForm DynamicFieldName RequiredField noDefault (IntegerField) <*>
                  FieldForm DynamicFieldName RequiredField noDefault (TextField)))))
-       "<input data-key=\"/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/r/\" name=\"/r/\" class=\"form-control\">")
+       "<input data-key=\"/l/m/\" pattern=\"-?[0-9]*\" name=\"/l/m/\" type=\"text\"><input data-key=\"/r/\" name=\"/r/\">")
 
 multiples :: Spec
 multiples =
@@ -400,7 +401,7 @@ multiples =
                    @(Field Identity)
                    @Error
                    (basicNumericState mempty)))
-             "<input data-key=\"/s/m/\" pattern=\"-?[0-9]*\" name=\"/s/m/\" type=\"text\" class=\"form-control\">")
+             "<input data-key=\"/s/m/\" pattern=\"-?[0-9]*\" name=\"/s/m/\" type=\"text\">")
         it
           "Empty with defaults"
           (shouldBe
@@ -412,7 +413,7 @@ multiples =
                    @(Field Identity)
                    @Error
                    (basicNumericState [(123, "foo")])))
-             "<input data-key=\"/s/m/\" pattern=\"-?[0-9]*\" name=\"/s/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/i/1/l/m/\" pattern=\"-?[0-9]*\" value=\"123\" name=\"/i/1/l/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/i/1/r/\" value=\"foo\" name=\"/i/1/r/\" class=\"form-control\">")
+             "<input data-key=\"/s/m/\" pattern=\"-?[0-9]*\" name=\"/s/m/\" type=\"text\"><input data-key=\"/i/1/l/m/\" pattern=\"-?[0-9]*\" value=\"123\" name=\"/i/1/l/m/\" type=\"text\"><input data-key=\"/i/1/r/\" value=\"foo\" name=\"/i/1/r/\">")
         it
           "Missing input"
           (shouldBe
@@ -428,7 +429,7 @@ multiples =
                       @Error
                       (M.fromList [("/s/m/", pure (TextInput "2"))])
                       (basicNumericState mempty))))
-             (Generated {generatedView = "<input data-key=\"/s/m/\" pattern=\"-?[0-9]*\" value=\"2\" name=\"/s/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/i/1/l/m/\" pattern=\"-?[0-9]*\" name=\"/i/1/l/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/i/1/r/\" name=\"/i/1/r/\" class=\"form-control\"><input data-key=\"/i/2/l/m/\" pattern=\"-?[0-9]*\" name=\"/i/2/l/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/i/2/r/\" name=\"/i/2/r/\" class=\"form-control\">", generatedValue = Failure [MissingInput (Key {unKey = "/i/1/l/m/"}),MissingInput (Key {unKey = "/i/1/r/"}),MissingInput (Key {unKey = "/i/2/l/m/"}),MissingInput (Key {unKey = "/i/2/r/"})]}))
+             (Generated {generatedView = "<input data-key=\"/s/m/\" pattern=\"-?[0-9]*\" value=\"2\" name=\"/s/m/\" type=\"text\"><input data-key=\"/i/1/l/m/\" pattern=\"-?[0-9]*\" name=\"/i/1/l/m/\" type=\"text\"><input data-key=\"/i/1/r/\" name=\"/i/1/r/\"><input data-key=\"/i/2/l/m/\" pattern=\"-?[0-9]*\" name=\"/i/2/l/m/\" type=\"text\"><input data-key=\"/i/2/r/\" name=\"/i/2/r/\">", generatedValue = Failure [MissingInput (Key {unKey = "/i/1/l/m/"}),MissingInput (Key {unKey = "/i/1/r/"}),MissingInput (Key {unKey = "/i/2/l/m/"}),MissingInput (Key {unKey = "/i/2/r/"})]}))
         let fullySatisfied defaults =
               it
                 ("Fully satisfied inputs, defaults = " ++ show defaults)
@@ -453,7 +454,7 @@ multiples =
                                , ("/i/2/r/", pure (TextInput "World!"))
                                ])
                             (basicNumericState defaults))))
-                   (Generated {generatedView = "<input data-key=\"/s/m/\" pattern=\"-?[0-9]*\" value=\"2\" name=\"/s/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/i/1/l/m/\" pattern=\"-?[0-9]*\" value=\"666\" name=\"/i/1/l/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/i/1/r/\" value=\"Hello!\" name=\"/i/1/r/\" class=\"form-control\"><input data-key=\"/i/2/l/m/\" pattern=\"-?[0-9]*\" value=\"123\" name=\"/i/2/l/m/\" type=\"text\" class=\"form-control\"><input data-key=\"/i/2/r/\" value=\"World!\" name=\"/i/2/r/\" class=\"form-control\">", generatedValue = Success [(666,"Hello!"),(123,"World!")]}))
+                   (Generated {generatedView = "<input data-key=\"/s/m/\" pattern=\"-?[0-9]*\" value=\"2\" name=\"/s/m/\" type=\"text\"><input data-key=\"/i/1/l/m/\" pattern=\"-?[0-9]*\" value=\"666\" name=\"/i/1/l/m/\" type=\"text\"><input data-key=\"/i/1/r/\" value=\"Hello!\" name=\"/i/1/r/\"><input data-key=\"/i/2/l/m/\" pattern=\"-?[0-9]*\" value=\"123\" name=\"/i/2/l/m/\" type=\"text\"><input data-key=\"/i/2/r/\" value=\"World!\" name=\"/i/2/r/\">", generatedValue = Success [(666,"Hello!"),(123,"World!")]}))
         fullySatisfied mempty
         fullySatisfied (pure (123, "foo")))
   where
