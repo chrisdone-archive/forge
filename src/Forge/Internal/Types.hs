@@ -41,6 +41,7 @@ module Forge.Internal.Types
   , FieldResult
   , maybeDefault
   , submittedToDefault
+  , notSubmitted
   , Submitted
   , Reflected
   , unsafeUnreflect
@@ -132,6 +133,10 @@ data Form index (parse :: * -> *) view (field :: * -> *) error a where
     -- ^ Defaults.
     -> Form index parse view field error [a]
     -- ^ The final form.
+  BindForm
+    :: Form index parse view field error a
+    -> (Submitted a -> Form index parse view field error b)
+    -> Form index parse view field error b
 
 instance (a ~ (), IsString view) =>
          IsString (Form index parse view field error a) where
@@ -175,6 +180,9 @@ instance (index ~ 'Unverified) => IsString (FieldName index) where
 newtype Submitted a = Submitted
   { unSubmitted :: Maybe a
   } deriving (Functor, Show, Applicative, Semigroup, Monoid)
+
+notSubmitted :: Submitted a
+notSubmitted = Submitted Nothing
 
 submittedToDefault :: Submitted a -> Default a
 submittedToDefault (Submitted a) = Default a
@@ -305,6 +313,8 @@ data Path
   | InFloor !Path
   | InManySet !Path
   | InManyIndex !Integer !Path
+  | InBindLhs !Path
+  | InBindRhs !Path
   | PathEnd
   deriving (Show, Eq, Ord)
 

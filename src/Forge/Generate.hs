@@ -51,6 +51,15 @@ generate inputs = go PathBegin . unVerifiedForm
       -> parse (Generated view err x)
     go path =
       \case
+        BindForm m f -> do
+          mresult@Generated {generatedValue = value} <- go (path . InBindLhs) m
+          case value of
+            Failure {} -> do
+              fresult <- go (path . InBindRhs) (f notSubmitted)
+              pure (mresult *> fresult)
+            Success v -> do
+              fresult <- go (path . InBindRhs) (f (pure v))
+              pure (mresult *> fresult)
         ValueForm m -> pure (pure (unsafeUnreflect m))
         MapValueForm f form -> fmap (fmap f) (go (path . InMapValue) form)
         MapErrorForm f form ->
@@ -140,14 +149,18 @@ generate inputs = go PathBegin . unVerifiedForm
                 Generated
                   { generatedValue = generatedValue totalGenerated
                   , generatedView =
-                      (unsafeUnreflect viewTransformer) setView (map generatedView generateds)
+                      (unsafeUnreflect viewTransformer)
+                        setView
+                        (map generatedView generateds)
                   }
             Generated {generatedValue = Failure err} ->
               pure
                 setGenerated
                   { generatedValue = Failure err
                   , generatedView =
-                      (unsafeUnreflect viewTransformer) (generatedView setGenerated) []
+                      (unsafeUnreflect viewTransformer)
+                        (generatedView setGenerated)
+                        []
                   }
     pureView :: forall e. view -> Generated view e ()
     pureView v = Generated {generatedView = v, generatedValue = pure ()}
@@ -168,6 +181,8 @@ pathToKey = Key . go
         InMapError path -> "e/" <> go path
         InManySet path -> "s/" <> go path
         InManyIndex idx path -> "i/" <> fromString (show idx) <> "/" <> go path
+        InBindLhs path -> "blhs/" <> go path
+        InBindRhs path -> "brhs/" <> go path
         PathEnd -> ""
 
 -- | View a form in the given parse context.
@@ -203,6 +218,9 @@ viewWithError inputs = go
       -> view
     go errs path =
       \case
+        BindForm m f ->
+          go errs (path . InBindLhs) m <>
+          go errs (path . InBindRhs) (f notSubmitted)
         ValueForm _ -> mempty
         -- When we hit a map over the error, that means what is below
         -- cannot by the type system even access what's
@@ -215,7 +233,8 @@ viewWithError inputs = go
                (zip [1 ..] defaults))
         MapErrorForm _ form -> go Nothing (path . InMapError) form
         MapValueForm _ form -> go errs (path . InMapValue) form
-        CeilingForm f form -> fst ((unsafeUnreflect f) [] (go errs (path . InCeiling) form))
+        CeilingForm f form ->
+          fst ((unsafeUnreflect f) [] (go errs (path . InCeiling) form))
         ApValueForm f x ->
           go errs (path . InApLeft) f <> go errs (path . InApRight) x
         ViewForm m -> unsafeUnreflect m
@@ -235,5 +254,6 @@ viewWithError inputs = go
                     StaticFieldName text -> Key text
         ParseForm _ form -> go errs (path . InParse) form
         FloorForm f form ->
-          let (view', errs') = (unsafeUnreflect f) errs (go errs' (path . InFloor) form)
+          let (view', errs') =
+                (unsafeUnreflect f) errs (go errs' (path . InFloor) form)
            in view'
