@@ -110,6 +110,7 @@ instance ShowError Error where
   \case
     MissingInput {} -> "Missing input: please fill this one in."
     InvalidInputFormat {} -> "Invalid input format."
+    MiscError e -> Lucid.toHtml e
 
 --------------------------------------------------------------------------------
 -- Data types for this interface
@@ -118,6 +119,7 @@ instance ShowError Error where
 data Error
   = MissingInput Forge.Key
   | InvalidInputFormat Forge.Key (NonEmpty Forge.Input)
+  | MiscError Text
   deriving (Show, Eq)
 
 data PasswordConfig r = PasswordConfig

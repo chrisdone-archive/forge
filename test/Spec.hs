@@ -6,9 +6,13 @@
 
 module Main (main) where
 
+import           Control.Arrow
 import           Data.Functor.Identity
+import           Data.Ix
+import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.Map.Strict as M
 import           Data.Text (Text)
+import qualified Data.Text as T
 import           Data.Validation
 import           Forge.Generate
 import           Forge.Internal.Types
@@ -48,7 +52,8 @@ main =
            floor
            ceiling
            parseFail
-           multiples))
+           multiples
+           bindtests))
 
 thTests :: Spec
 thTests =
@@ -133,6 +138,142 @@ invalidInputs = do it
                                  (M.singleton "/" (pure (TextInput "x")))
                                  (verified (FieldForm DynamicFieldName RequiredField noDefault (IntegerField))))))
                         (Failure [InvalidInputFormat "/" (pure (TextInput "x"))]))
+
+bindtests :: Spec
+bindtests = do
+  describe
+    "Bind"
+    (it
+       "Basic passing"
+       (do shouldBe
+             (renderText
+                (view
+                   @'Verified
+                   @Identity
+                   @(Html ())
+                   @(Field Identity)
+                   @Error
+                   (verified
+                      (BindForm
+                         (FieldForm
+                            DynamicFieldName
+                            RequiredField
+                            noDefault
+                            IntegerField)
+                         (\submitted ->
+                            FieldForm
+                              DynamicFieldName
+                              RequiredField
+                              (fmap (* 2) (submittedToDefault submitted))
+                              IntegerField)))))
+             "<input data-key=\"/blhs/\" pattern=\"-?[0-9]*\" name=\"/blhs/\" type=\"text\"><input data-key=\"/brhs/\" pattern=\"-?[0-9]*\" name=\"/brhs/\" type=\"text\">"
+           shouldBe
+             ((generatedValue &&& (renderText . generatedView))
+                (runIdentity
+                   (generate
+                      @'Verified
+                      @Identity
+                      @(Html ())
+                      @(Field Identity)
+                      @Error
+                      (M.singleton "/blhs/" (pure (TextInput "5")))
+                      (verified
+                         (BindForm
+                            (FieldForm
+                               DynamicFieldName
+                               RequiredField
+                               noDefault
+                               IntegerField)
+                            (\submitted ->
+                               FieldForm
+                                 DynamicFieldName
+                                 RequiredField
+                                 (fmap (* 2) (submittedToDefault submitted))
+                                 IntegerField))))))
+             ( Failure [MissingInput (Key {unKey = "/brhs/"})]
+             , "<input data-key=\"/blhs/\" pattern=\"-?[0-9]*\" value=\"5\" name=\"/blhs/\" type=\"text\"><input data-key=\"/brhs/\" pattern=\"-?[0-9]*\" value=\"10\" name=\"/brhs/\" type=\"text\">")
+           shouldBe
+             ((generatedValue &&& (renderText . generatedView))
+                (runIdentity
+                   (generate
+                      @'Verified
+                      @Identity
+                      @(Html ())
+                      @(Field Identity)
+                      @Error
+                      (M.singleton "/blhs/" (pure (TextInput "x")))
+                      (verified
+                         (BindForm
+                            (FieldForm
+                               DynamicFieldName
+                               RequiredField
+                               noDefault
+                               IntegerField)
+                            (\submitted ->
+                               FieldForm
+                                 DynamicFieldName
+                                 RequiredField
+                                 (fmap (* 2) (submittedToDefault submitted))
+                                 IntegerField))))))
+             ( Failure
+                 [ InvalidInputFormat
+                     (Key {unKey = "/blhs/"})
+                     (TextInput "x" :| [])
+                 , MissingInput (Key {unKey = "/brhs/"})
+                 ]
+             , "<input data-key=\"/blhs/\" pattern=\"-?[0-9]*\" value=\"x\" name=\"/blhs/\" type=\"text\"><input data-key=\"/brhs/\" pattern=\"-?[0-9]*\" name=\"/brhs/\" type=\"text\">")
+           shouldBe
+             ((generatedValue &&& (renderText . generatedView))
+                (runIdentity
+                   (generate
+                      @'Verified
+                      @Identity
+                      @(Html ())
+                      @(Field Identity)
+                      @Error
+                      (M.fromList
+                         [ ("/blhs/l/m/", (pure (TextInput "5")))
+                         , ("/blhs/r/", (pure (TextInput "10")))
+                         , ("/brhs/p/", (pure (TextInput "13")))
+                         ])
+                      (verified
+                         (BindForm
+                            ((,) <$>
+                             FieldForm
+                               DynamicFieldName
+                               RequiredField
+                               noDefault
+                               IntegerField <*>
+                             FieldForm
+                               DynamicFieldName
+                               RequiredField
+                               noDefault
+                               IntegerField)
+                            (\submitted ->
+                               ParseForm
+                                 (reflect
+                                    (const
+                                       (pure
+                                          (Left
+                                             (MiscError
+                                                "Please fill in the previous forms."))))
+                                    (fmap
+                                       (\range' v ->
+                                          if inRange range' v
+                                            then pure (pure v)
+                                            else pure
+                                                   (Left
+                                                      (MiscError
+                                                         ("Not in range specified by you: " <>
+                                                          T.pack (show range')))))
+                                       submitted))
+                                 (FieldForm
+                                    DynamicFieldName
+                                    RequiredField
+                                    (submittedToDefault (fmap fst submitted))
+                                    IntegerField)))))))
+             ( Failure [MiscError "Not in range specified by you: (5,10)"]
+             , "<input data-key=\"/blhs/l/m/\" pattern=\"-?[0-9]*\" value=\"5\" name=\"/blhs/l/m/\" type=\"text\"><input data-key=\"/blhs/r/\" pattern=\"-?[0-9]*\" value=\"10\" name=\"/blhs/r/\" type=\"text\"><input data-key=\"/brhs/p/\" pattern=\"-?[0-9]*\" value=\"13\" name=\"/brhs/p/\" type=\"text\">")))
 
 inputParsing :: Spec
 inputParsing = do
@@ -224,6 +365,7 @@ floor =
                                                   p_ "passwords do not match"
                                                 LucidError er ->
                                                   case er of
+                                                    MiscError e -> toHtml e
                                                     InvalidInputFormat {} ->
                                                       p_ "invalid input format"
                                                     MissingInput {} ->
@@ -308,6 +450,7 @@ ceiling =
                                              li_ "number too low!"
                                            LucidError2 er ->
                                              case er of
+                                               MiscError e -> toHtml e
                                                InvalidInputFormat {} ->
                                                  li_ "invalid input format"
                                                MissingInput {} ->
