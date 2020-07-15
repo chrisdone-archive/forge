@@ -51,7 +51,7 @@ generate inputs = go PathBegin . unVerifiedForm
       -> parse (Generated view err x)
     go path =
       \case
-        ValueForm m -> pure (pure m)
+        ValueForm m -> pure (pure (unsafeUnreflect m))
         MapValueForm f form -> fmap (fmap f) (go (path . InMapValue) form)
         MapErrorForm f form ->
           fmap
@@ -63,7 +63,7 @@ generate inputs = go PathBegin . unVerifiedForm
             (go (path . InMapError) form)
         ApValueForm f x ->
           (<*>) <$> go (path . InApLeft) f <*> go (path . InApRight) x
-        ViewForm m -> pure (pureView m)
+        ViewForm m -> pure (pureView (unsafeUnreflect m))
         FieldForm name required def m -> do
           field <- pure m
           let key =
@@ -78,7 +78,7 @@ generate inputs = go PathBegin . unVerifiedForm
                   @err
                   key
                   required
-                  (defaultMaybe def)
+                  (unsafeUndefault def)
                   minput
                   field
           case minput of
@@ -102,7 +102,7 @@ generate inputs = go PathBegin . unVerifiedForm
           generated@Generated {generatedView} <- go (path . InParse) form
           case generatedValue generated of
             Success a -> do
-              result <- f a
+              result <- (unsafeUnreflect f) a
               case result of
                 Left err ->
                   pure
@@ -119,7 +119,7 @@ generate inputs = go PathBegin . unVerifiedForm
         CeilingForm f form -> do
           generated@Generated {generatedView} <- go (path . InCeiling) form
           let (generatedView', errs') =
-                f
+                (unsafeUnreflect f)
                   (validation id (const []) (generatedValue generated))
                   generatedView
           pure
@@ -140,14 +140,14 @@ generate inputs = go PathBegin . unVerifiedForm
                 Generated
                   { generatedValue = generatedValue totalGenerated
                   , generatedView =
-                      viewTransformer setView (map generatedView generateds)
+                      (unsafeUnreflect viewTransformer) setView (map generatedView generateds)
                   }
             Generated {generatedValue = Failure err} ->
               pure
                 setGenerated
                   { generatedValue = Failure err
                   , generatedView =
-                      viewTransformer (generatedView setGenerated) []
+                      (unsafeUnreflect viewTransformer) (generatedView setGenerated) []
                   }
     pureView :: forall e. view -> Generated view e ()
     pureView v = Generated {generatedView = v, generatedValue = pure ()}
@@ -208,17 +208,17 @@ viewWithError inputs = go
         -- cannot by the type system even access what's
         -- above. Therefore this forms a lower boundary.
         ManyForm viewTransformer setForm itemForm defaults ->
-          viewTransformer
+          (unsafeUnreflect viewTransformer)
             (go errs (path . InManySet) setForm)
             (map
                (\(i, a) -> go errs (path . InManyIndex i) (itemForm (pure a)))
                (zip [1 ..] defaults))
         MapErrorForm _ form -> go Nothing (path . InMapError) form
         MapValueForm _ form -> go errs (path . InMapValue) form
-        CeilingForm f form -> fst (f [] (go errs (path . InCeiling) form))
+        CeilingForm f form -> fst ((unsafeUnreflect f) [] (go errs (path . InCeiling) form))
         ApValueForm f x ->
           go errs (path . InApLeft) f <> go errs (path . InApRight) x
-        ViewForm m -> m
+        ViewForm m -> unsafeUnreflect m
         FieldForm name required def m ->
           viewField
             @view
@@ -226,7 +226,7 @@ viewWithError inputs = go
             @error
             key
             required
-            (defaultMaybe def)
+            (unsafeUndefault def)
             (M.lookup key inputs)
             m
           where key =
@@ -235,5 +235,5 @@ viewWithError inputs = go
                     StaticFieldName text -> Key text
         ParseForm _ form -> go errs (path . InParse) form
         FloorForm f form ->
-          let (view', errs') = f errs (go errs' (path . InFloor) form)
+          let (view', errs') = (unsafeUnreflect f) errs (go errs' (path . InFloor) form)
            in view'

@@ -55,7 +55,7 @@ wrap ::
      (t -> t)
   -> Forge.Form index parse t field error a
   -> Forge.Form index parse t field error a
-wrap f = Forge.CeilingForm (\es html -> (f html,es))
+wrap f = Forge.CeilingForm (pure (\es html -> (f html,es)))
 
 -- | Wrap a formlet with its errors. Do not allow errors to bubble up.
 formGroup ::
@@ -65,17 +65,20 @@ formGroup ::
   -> Forge.Form index parse (Lucid.HtmlT m ()) field error a
 formGroup label =
   Forge.CeilingForm
-    (\errors html' ->
-       ( do Lucid.div_
-              [Lucid.class_ "form-group"]
-              (do Lucid.label_ (Lucid.toHtml label)
-                  Lucid.with html' [Lucid.class_ " is-invalid" | not (null errors)]
-                  unless
-                    (null errors)
-                    (Lucid.div_
-                       [Lucid.class_ "invalid-feedback"]
-                       (mapM_ (Lucid.span_ . showError) errors)))
-       , []))
+    (pure
+       (\errors html' ->
+          ( do Lucid.div_
+                 [Lucid.class_ "form-group"]
+                 (do Lucid.label_ (Lucid.toHtml label)
+                     Lucid.with
+                       html'
+                       [Lucid.class_ " is-invalid" | not (null errors)]
+                     unless
+                       (null errors)
+                       (Lucid.div_
+                          [Lucid.class_ "invalid-feedback"]
+                          (mapM_ (Lucid.span_ . showError) errors)))
+          , [])))
 
 -- | Wrap a form with its errors. Do not allow errors to bubble up.
 formWrap ::
@@ -84,14 +87,15 @@ formWrap ::
   -> Forge.Form index parse (Lucid.HtmlT m ()) field error a
 formWrap =
   Forge.CeilingForm
-    (\errors html' ->
-       ( do html'
-            unless
-              (null errors)
-              (Lucid.p_
-                 [Lucid.class_ "invalid-feedback invalid-feedback-visible"]
-                 (mapM_ (Lucid.span_ . showError) errors))
-       , []))
+    (pure
+       (\errors html' ->
+          ( do html'
+               unless
+                 (null errors)
+                 (Lucid.p_
+                    [Lucid.class_ "invalid-feedback invalid-feedback-visible"]
+                    (mapM_ (Lucid.span_ . showError) errors))
+          , [])))
 
 -- | Convert an error to HTML.
 class ShowError error where

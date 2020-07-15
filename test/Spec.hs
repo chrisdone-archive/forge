@@ -147,7 +147,12 @@ inputParsing = do
                 @(Field Identity)
                 @Error
                 (M.singleton "/" (pure (TextInput "5")))
-                (verified (FieldForm DynamicFieldName RequiredField noDefault (IntegerField))))))
+                (verified
+                   (FieldForm
+                      DynamicFieldName
+                      RequiredField
+                      noDefault
+                      (IntegerField))))))
        (Success 5))
   it
     "Form parsing"
@@ -163,15 +168,20 @@ inputParsing = do
                 (M.singleton "/p/" (pure (TextInput "6")))
                 (verified
                    (ParseForm
-                      (\i ->
-                         pure
-                           (if i > 5
-                              then Right (i * 2)
-                              else Left
-                                     (InvalidInputFormat
-                                        "/"
-                                        (pure (FileInput "")))))
-                      (FieldForm DynamicFieldName RequiredField noDefault (IntegerField)))))))
+                      (pure
+                         (\i ->
+                            pure
+                              (if i > 5
+                                 then Right (i * 2)
+                                 else Left
+                                        (InvalidInputFormat
+                                           "/"
+                                           (pure (FileInput ""))))))
+                      (FieldForm
+                         DynamicFieldName
+                         RequiredField
+                         noDefault
+                         (IntegerField)))))))
        (Success 12))
 
 floor :: Spec
@@ -194,41 +204,47 @@ floor =
                       ])
                    (verified
                       (ParseForm
-                         (\(a, b) ->
-                            pure
-                              (if a == b
-                                 then Right a
-                                 else Left (PasswordsMismatch a b)))
+                         (pure
+                            (\(a, b) ->
+                               pure
+                                 (if a == b
+                                    then Right a
+                                    else Left (PasswordsMismatch a b))))
                          (let flooring =
                                 FloorForm
-                                  (\merr v ->
-                                     ( v <>
-                                       case merr of
-                                         Nothing -> mempty
-                                         Just err ->
-                                           case err of
-                                             PasswordsMismatch _ _ ->
-                                               p_ "passwords do not match"
-                                             LucidError er ->
-                                               case er of
-                                                 InvalidInputFormat {} ->
-                                                   p_ "invalid input format"
-                                                 MissingInput {} ->
-                                                   p_ "missing input!"
-                                     , Nothing))
+                                  (pure
+                                     (\merr v ->
+                                        ( v <>
+                                          case merr of
+                                            Nothing -> mempty
+                                            Just err ->
+                                              case err of
+                                                PasswordsMismatch _ _ ->
+                                                  p_ "passwords do not match"
+                                                LucidError er ->
+                                                  case er of
+                                                    InvalidInputFormat {} ->
+                                                      p_ "invalid input format"
+                                                    MissingInput {} ->
+                                                      p_ "missing input!"
+                                        , Nothing)))
                            in (((,) <$>
                                 flooring
                                   (MapErrorForm
                                      LucidError
                                      (FieldForm
-                                        DynamicFieldName RequiredField
-                                        noDefault (TextField))) <*>
+                                        DynamicFieldName
+                                        RequiredField
+                                        noDefault
+                                        (TextField))) <*>
                                 flooring
                                   (MapErrorForm
                                      LucidError
                                      (FieldForm
-                                        DynamicFieldName RequiredField
-                                        noDefault (TextField))))))))))))
+                                        DynamicFieldName
+                                        RequiredField
+                                        noDefault
+                                        (TextField))))))))))))
        "<input data-key=\"/p/l/m/f/e/\" value=\"letmein\" name=\"/p/l/m/f/e/\" class=\"form-control\"><p>passwords do not match</p><input data-key=\"/p/r/f/e/\" value=\"letmein!\" name=\"/p/r/f/e/\" class=\"form-control\"><p>passwords do not match</p>")
 
 parseFail :: Spec
@@ -247,12 +263,20 @@ parseFail =
                 (M.singleton "/p/" (pure (TextInput "5")))
                 (verified
                    (ParseForm
-                      (\i ->
-                         pure
-                           (if i > 5
-                              then Right i
-                              else Left (InvalidInputFormat "/" (pure (FileInput "")))))
-                      (FieldForm DynamicFieldName RequiredField noDefault (IntegerField)))))))
+                      (pure
+                         (\i ->
+                            pure
+                              (if i > 5
+                                 then Right i
+                                 else Left
+                                        (InvalidInputFormat
+                                           "/"
+                                           (pure (FileInput ""))))))
+                      (FieldForm
+                         DynamicFieldName
+                         RequiredField
+                         noDefault
+                         (IntegerField)))))))
        (Failure [InvalidInputFormat (Key {unKey = "/"}) (pure (FileInput ""))]))
 
 ceiling :: Spec
@@ -272,32 +296,37 @@ ceiling =
                    (M.singleton "/c/p/e/" (pure (TextInput "1")))
                    (verified
                       (CeilingForm
-                         (\merr v ->
-                            ( v <>
-                              ul_
-                                (mapM_
-                                   (\err ->
-                                      case err of
-                                        NumberTooLow _ -> li_ "number too low!"
-                                        LucidError2 er ->
-                                          case er of
-                                            InvalidInputFormat {} ->
-                                              li_ "invalid input format"
-                                            MissingInput {} ->
-                                              li_ "missing input!")
-                                   merr)
-                            , []))
+                         (pure
+                            (\merr v ->
+                               ( v <>
+                                 ul_
+                                   (mapM_
+                                      (\err ->
+                                         case err of
+                                           NumberTooLow _ ->
+                                             li_ "number too low!"
+                                           LucidError2 er ->
+                                             case er of
+                                               InvalidInputFormat {} ->
+                                                 li_ "invalid input format"
+                                               MissingInput {} ->
+                                                 li_ "missing input!")
+                                      merr)
+                               , [])))
                          (ParseForm
-                            (\i ->
-                               pure
-                                 (if i > 5
-                                    then Right (i * 2)
-                                    else Left (NumberTooLow i)))
+                            (pure
+                               (\i ->
+                                  pure
+                                    (if i > 5
+                                       then Right (i * 2)
+                                       else Left (NumberTooLow i))))
                             (MapErrorForm
                                LucidError2
                                (FieldForm
-                                  DynamicFieldName RequiredField
-                                  noDefault (IntegerField))))))))))
+                                  DynamicFieldName
+                                  RequiredField
+                                  noDefault
+                                  (IntegerField))))))))))
        "<input data-key=\"/c/p/e/\" pattern=\"-?[0-9]*\" value=\"1\" name=\"/c/p/e/\" type=\"text\" class=\"form-control\"><ul><li>number too low!</li></ul>")
 
 nameStability :: Spec
@@ -431,7 +460,7 @@ multiples =
     basicNumericState defaults =
       verified
         (ManyForm
-           (\setView views -> setView <> mconcat views)
+           (pure (\setView views -> setView <> mconcat views))
            (fmap
               (enumFromTo 1)
               -- Above: We generate an ordered list here. However:

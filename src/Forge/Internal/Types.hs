@@ -33,13 +33,18 @@ module Forge.Internal.Types
   , Input(..)
   , Key(..)
   , Path(..)
-  , Default(..)
-  , defaultMaybe
+  , Default
+  , unsafeUndefault
   , noDefault
   , FieldRequired(..)
   , RequiredT(..)
   , FieldResult
   , maybeDefault
+  , submittedToDefault
+  , Submitted
+  , Reflected
+  , unsafeUnreflect
+  , reflect
   ) where
 
 import Data.Functor.Identity
@@ -64,7 +69,7 @@ import Data.Validation
 data Form index (parse :: * -> *) view (field :: * -> *) error a where
   -- | Produce a pure value.
   ValueForm
-    :: a -- ^ A pure value to produce.
+    :: Reflected a -- ^ A pure value to produce.
     -> Form index parse view field error a
   -- | Map over the value. This mirrors 'fmap'.
   MapValueForm
@@ -85,7 +90,7 @@ data Form index (parse :: * -> *) view (field :: * -> *) error a where
     -> Form index parse view field error b
   -- | Embed a view in a form, such as a label or some text.
   ViewForm
-    :: view -- ^ A view (e.g. html) to embed.
+    :: Reflected view -- ^ A view (e.g. html) to embed.
     -> Form index parse view field error () -- ^ A form that just displays that view.
   -- | A terminal node in the form tree that represents a field; a
   -- producer of values (aside from 'ValueForm'), from user input.
@@ -97,26 +102,26 @@ data Form index (parse :: * -> *) view (field :: * -> *) error a where
     -> Form index parse view field error (FieldResult r a) -- ^ Form representing that field.
   -- | Parse a form's result.
   ParseForm
-    :: (x -> parse (Either error a)) -- ^ Run a parser in @parse@ and produce @error@ or the value.
+    :: Reflected (x -> parse (Either error a)) -- ^ Run a parser in @parse@ and produce @error@ or the value.
     -> Form index parse view field error x -- ^ Form whose result we will parse.
     -> Form index parse view field error a
   -- | Transform a form's view using the error from above.
   FloorForm
-    :: (Maybe error -> view -> (view, Maybe error))
+    :: Reflected (Maybe error -> view -> (view, Maybe error))
     -- ^ Transforms view below using error, if any, from above.
     -> Form index parse view field error a
     -- ^ Form whose errors we are not interested in.
     -> Form index parse view field error a
   -- | Transform a form's view using errors from below.
   CeilingForm
-    :: ([error] -> view -> (view, [error]))
+    :: Reflected ([error] -> view -> (view, [error]))
     -- ^ Transform the errors coming from below.
     -> Form index parse view field error a
     -- ^ Form that bubbles errors up.
     -> Form index parse view field error a
   -- | Many formlets.
   ManyForm
-    :: (view -> [view] -> view)
+    :: Reflected (view -> [view] -> view)
     -- ^ The set's view, the items' views, and produce a final view.
     -> Form index parse view field error [Integer]
     -- ^ The set.
@@ -138,7 +143,7 @@ instance Functor (Form index parse view field error) where
 -- | Used to combine forms together.
 instance Applicative (Form index parse view field error) where
   (<*>) = ApValueForm
-  pure = ValueForm
+  pure = ValueForm . pure
 
 --------------------------------------------------------------------------------
 -- Field names
@@ -158,18 +163,39 @@ instance (index ~ 'Unverified) => IsString (FieldName index) where
 --------------------------------------------------------------------------------
 -- Submitted data
 
+-- TODO: apply this type to validations/views within the Form type.
+
+-- TODO: if that works out, then add a:
+--  BindForm :: (Submitted (Maybe a) -> Form index parse view field error b)
+--                      ^ note the Maybe a, Nothing=not-submitted
+--           -> Form index parse view field error b
+
+-- | Data which has been submitted by a form submission and may not be available yet.
 newtype Submitted a = Submitted
-  { unSubmitted :: Identity a
+  { unSubmitted :: Maybe a
   } deriving (Functor, Show, Applicative, Semigroup, Monoid)
+
+submittedToDefault :: Submitted a -> Default a
+submittedToDefault (Submitted a) = Default a
+
+-- | Data which can come from the form itself.
+newtype Reflected a = Reflected
+  { unReflected :: Identity a
+  } deriving (Functor, Show, Applicative, Semigroup, Monoid, IsString)
+
+-- | For internal use.
+unsafeUnreflect :: Reflected a -> a
+unsafeUnreflect (Reflected (Identity a)) = a
+
+-- | Reflect the submitted data to be available right now, if submitted.
+reflect :: Submitted a -> Maybe (Reflected a)
+reflect = fmap (Reflected . Identity) . unSubmitted
 
 --------------------------------------------------------------------------------
 -- Defaults
 
-newtype Default a = Default { unDefault :: Maybe a}
+newtype Default a = Default { unsafeUndefault :: Maybe a}
   deriving (Functor, Show, Applicative, Semigroup, Monoid)
-
-defaultMaybe :: Default a -> Maybe a
-defaultMaybe = unDefault
 
 maybeDefault :: Maybe a -> Default a
 maybeDefault = Default
