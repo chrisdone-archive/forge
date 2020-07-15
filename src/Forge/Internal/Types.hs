@@ -49,6 +49,7 @@ module Forge.Internal.Types
 
 import Data.Functor.Identity
 import Data.List.NonEmpty (NonEmpty(..))
+import Data.Maybe
 import Data.String
 import Data.Text (Text)
 import Data.Validation
@@ -188,8 +189,8 @@ unsafeUnreflect :: Reflected a -> a
 unsafeUnreflect (Reflected (Identity a)) = a
 
 -- | Reflect the submitted data to be available right now, if submitted.
-reflect :: Submitted a -> Maybe (Reflected a)
-reflect = fmap (Reflected . Identity) . unSubmitted
+reflect :: a -> Submitted a -> Reflected a
+reflect def = Reflected . Identity . fromMaybe def . unSubmitted
 
 --------------------------------------------------------------------------------
 -- Defaults
