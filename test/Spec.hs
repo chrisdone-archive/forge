@@ -154,7 +154,7 @@ bindtests = do
                    @(Field Identity)
                    @Error
                    (verified
-                      (BindForm const
+                      (BindForm (flip const)
                          (FieldForm
                             DynamicFieldName
                             RequiredField
@@ -178,7 +178,7 @@ bindtests = do
                       @Error
                       (M.singleton "/blhs/" (pure (TextInput "5")))
                       (verified
-                         (BindForm const
+                         (BindForm (flip const)
                             (FieldForm
                                DynamicFieldName
                                RequiredField
@@ -203,7 +203,7 @@ bindtests = do
                       @Error
                       (M.singleton "/blhs/" (pure (TextInput "x")))
                       (verified
-                         (BindForm const
+                         (BindForm (flip const)
                             (FieldForm
                                DynamicFieldName
                                RequiredField
@@ -237,7 +237,7 @@ bindtests = do
                          , ("/brhs/p/", (pure (TextInput "13")))
                          ])
                       (verified
-                         (BindForm const
+                         (BindForm (flip const)
                             ((,) <$>
                              FieldForm
                                DynamicFieldName
