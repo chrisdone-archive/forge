@@ -165,7 +165,7 @@ runVerification =
         FloorForm _ f -> go f
         CeilingForm _ f -> go f
         ApValueForm f x -> go f >> go x
-        BindForm f x -> go f >> go (x notSubmitted)
+        BindForm _ f x -> go f >> go (x notSubmitted)
         ViewForm {} -> pure ()
         ParseForm _ f -> go f
         FieldForm name _ _ _ -> do

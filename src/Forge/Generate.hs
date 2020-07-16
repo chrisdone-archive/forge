@@ -51,15 +51,15 @@ generate inputs = go PathBegin . unVerifiedForm
       -> parse (Generated view err x)
     go path =
       \case
-        BindForm m f -> do
+        BindForm final m f -> do
           mresult@Generated {generatedValue = value} <- go (path . InBindLhs) m
           case value of
             Failure {} -> do
               fresult <- go (path . InBindRhs) (f notSubmitted)
-              pure (mresult *> fresult)
+              pure (final <$> mresult <*> fresult)
             Success v -> do
               fresult <- go (path . InBindRhs) (f (pure v))
-              pure (mresult *> fresult)
+              pure (final <$> mresult <*> fresult)
         ValueForm m -> pure (pure (unsafeUnreflect m))
         MapValueForm f form -> fmap (fmap f) (go (path . InMapValue) form)
         MapErrorForm f form ->
@@ -218,7 +218,7 @@ viewWithError inputs = go
       -> view
     go errs path =
       \case
-        BindForm m f ->
+        BindForm _ m f ->
           go errs (path . InBindLhs) m <>
           go errs (path . InBindRhs) (f notSubmitted)
         ValueForm _ -> mempty

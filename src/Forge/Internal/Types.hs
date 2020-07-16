@@ -68,8 +68,9 @@ import Data.Validation
 -- @
 --
 -- Produces @ValueForm (pure ("Hello, World!"))@.
-data Form index (parse :: * -> *) view (field :: * -> *) error a where
+data Form index (parse :: * -> *) view (field :: * -> *) error a
   -- | Produce a pure value.
+      where
   ValueForm
     :: Reflected a -- ^ A pure value to produce.
     -> Form index parse view field error a
@@ -134,9 +135,10 @@ data Form index (parse :: * -> *) view (field :: * -> *) error a where
     -> Form index parse view field error [a]
     -- ^ The final form.
   BindForm
-    :: Form index parse view field error a
+    :: (a -> b -> c)
+    -> Form index parse view field error a
     -> (Submitted a -> Form index parse view field error b)
-    -> Form index parse view field error b
+    -> Form index parse view field error c
 
 instance (a ~ (), IsString view) =>
          IsString (Form index parse view field error a) where
