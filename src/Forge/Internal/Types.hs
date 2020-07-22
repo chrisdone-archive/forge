@@ -82,9 +82,9 @@ data Form index (parse :: * -> *) view (field :: * -> *) error a
   -- | Map over the error type.
   MapErrorForm
     :: (FormError errorA, FormField view field errorA)
-    => (errorA -> errorB) -- ^ Map over the error.
+    => (errorA -> error) -- ^ Map over the error.
     -> Form index parse view field errorA a -- ^ Original form.
-    -> Form index parse view field errorB a -- ^ Form with new error type.
+    -> Form index parse view field error a -- ^ Form with new error type.
   -- | Applicative application of a function to a value. Notice that
   -- this mirrors '<*>' or 'Control.Monad.ap'.
   ApValueForm
@@ -110,7 +110,9 @@ data Form index (parse :: * -> *) view (field :: * -> *) error a
     -> Form index parse view field error a
   -- | Transform a form's view using the error from above.
   FloorForm
-    :: Reflected (Maybe error -> view -> (view, Maybe error))
+    :: Reflected (Maybe error -> Maybe error)
+    -- ^ Determine whether we continue sending the error downwards.
+    -> Reflected (Maybe error -> view -> view)
     -- ^ Transforms view below using error, if any, from above.
     -> Form index parse view field error a
     -- ^ Form whose errors we are not interested in.

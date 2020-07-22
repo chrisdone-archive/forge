@@ -42,26 +42,29 @@ generate ::
   -- ^ The description of your form.
   -> parse (Generated view error a)
   -- ^ The generated resut of the view and any value or errors.
-generate inputs = go PathBegin . unVerifiedForm
+generate inputs = go Nothing PathBegin . unVerifiedForm
   where
     go ::
          forall x err. (FormError err, FormField view field err)
-      => (Path -> Path)
+      => Maybe err
+      -> (Path -> Path)
       -> Form index parse view field err x
       -> parse (Generated view err x)
-    go path =
+    go merrorFromAbove path =
       \case
         BindForm final m f -> do
-          mresult@Generated {generatedValue = value} <- go (path . InBindLhs) m
+          mresult@Generated {generatedValue = value} <-
+            go merrorFromAbove (path . InBindLhs) m
           case value of
             Failure {} -> do
-              fresult <- go (path . InBindRhs) (f notSubmitted)
+              fresult <- go merrorFromAbove (path . InBindRhs) (f notSubmitted)
               pure (final <$> mresult <*> fresult)
             Success v -> do
-              fresult <- go (path . InBindRhs) (f (pure v))
+              fresult <- go merrorFromAbove (path . InBindRhs) (f (pure v))
               pure (final <$> mresult <*> fresult)
         ValueForm m -> pure (pure (unsafeUnreflect m))
-        MapValueForm f form -> fmap (fmap f) (go (path . InMapValue) form)
+        MapValueForm f form ->
+          fmap (fmap f) (go merrorFromAbove (path . InMapValue) form)
         MapErrorForm f form ->
           fmap
             (\gen ->
@@ -69,9 +72,10 @@ generate inputs = go PathBegin . unVerifiedForm
                  { generatedView = generatedView gen
                  , generatedValue = first (fmap f) (generatedValue gen)
                  })
-            (go (path . InMapError) form)
+            (go Nothing (path . InMapError) form)
         ApValueForm f x ->
-          (<*>) <$> go (path . InApLeft) f <*> go (path . InApRight) x
+          (<*>) <$> go merrorFromAbove (path . InApLeft) f <*>
+          go merrorFromAbove (path . InApRight) x
         ViewForm m -> pure (pureView (unsafeUnreflect m))
         FieldForm name required def m -> do
           field <- pure m
@@ -107,26 +111,36 @@ generate inputs = go PathBegin . unVerifiedForm
                        })
                 Right a ->
                   pure (Generated {generatedView, generatedValue = pure a})
-        ParseForm f form -> do
-          generated@Generated {generatedView} <- go (path . InParse) form
+        ParseForm parser form -> do
+          generated@Generated {generatedView} <-
+            go merrorFromAbove (path . InParse) form
           case generatedValue generated of
             Success a -> do
-              result <- (unsafeUnreflect f) a
+              result <- (unsafeUnreflect parser) a
               case result of
-                Left err ->
+                Left err -> do
+                  Generated {generatedView = generatedView'} <-
+                    go (pure err) (path . InParse) form
                   pure
                     (Generated
-                       { generatedView =
-                           viewWithError inputs (Just err) (path . InParse) form
+                       { generatedView = generatedView'
                        , generatedValue = Failure [err]
                        })
                 Right r ->
                   pure (Generated {generatedView, generatedValue = Success r})
             Failure errs -> do
               pure (Generated {generatedView, generatedValue = Failure errs})
-        FloorForm _ form -> go (path . InFloor) form
+        FloorForm errorTransform viewTransform form -> do
+          let merrorFromAbove' =
+                (unsafeUnreflect errorTransform) merrorFromAbove
+          generated@Generated {generatedView} <-
+            go merrorFromAbove' (path . InFloor) form
+          let generatedView' =
+                (unsafeUnreflect viewTransform) merrorFromAbove generatedView
+          pure generated {generatedView = generatedView'}
         CeilingForm f form -> do
-          generated@Generated {generatedView} <- go (path . InCeiling) form
+          generated@Generated {generatedView} <-
+            go merrorFromAbove (path . InCeiling) form
           let (generatedView', errs') =
                 (unsafeUnreflect f)
                   (validation id (const []) (generatedValue generated))
@@ -137,12 +151,16 @@ generate inputs = go PathBegin . unVerifiedForm
                , generatedValue = first (const errs') (generatedValue generated)
                })
         ManyForm viewTransformer setForm itemForm _defaults -> do
-          setGenerated <- go (path . InManySet) setForm
+          setGenerated <- go merrorFromAbove (path . InManySet) setForm
           case setGenerated of
             Generated {generatedValue = Success set, generatedView = setView} -> do
               generateds <-
                 traverse
-                  (\idx -> go (path . InManyIndex idx) (itemForm noDefault))
+                  (\idx ->
+                     go
+                       merrorFromAbove
+                       (path . InManyIndex idx)
+                       (itemForm noDefault))
                   set
               let totalGenerated = sequenceA generateds
               pure
@@ -192,51 +210,46 @@ view ::
   -- ^ The description of your form.
   -> view
   -- ^ The view of the form, no validations.
-view = viewWithError mempty Nothing PathBegin . unVerifiedForm
+view = viewInternal mempty PathBegin . unVerifiedForm
 
 -- | View the form with the given error from above.
-viewWithError ::
+viewInternal ::
      forall index parse view field error a.
      (Monoid view, FormField view field error)
   => Map Key (NonEmpty Input)
   -- ^ The inputs to your form.
-  -> Maybe error
-  -- ^ Errors generated by an above validation.
   -> (Path -> Path)
   -- ^ Starting path.
   -> Form index parse view field error a
   -- ^ The description of your form.
   -> view
   -- ^ The view of the form, no validations.
-viewWithError inputs = go
+viewInternal inputs = go
   where
     go ::
          forall x err.
-         Maybe err
-      -> (Path -> Path)
+         (Path -> Path)
       -> Form index parse view field err x
       -> view
-    go errs path =
+    go path =
       \case
         BindForm _ m f ->
-          go errs (path . InBindLhs) m <>
-          go errs (path . InBindRhs) (f notSubmitted)
+          go (path . InBindLhs) m <> go (path . InBindRhs) (f notSubmitted)
         ValueForm _ -> mempty
         -- When we hit a map over the error, that means what is below
         -- cannot by the type system even access what's
         -- above. Therefore this forms a lower boundary.
         ManyForm viewTransformer setForm itemForm defaults ->
           (unsafeUnreflect viewTransformer)
-            (go errs (path . InManySet) setForm)
+            (go (path . InManySet) setForm)
             (map
-               (\(i, a) -> go errs (path . InManyIndex i) (itemForm (pure a)))
+               (\(i, a) -> go (path . InManyIndex i) (itemForm (pure a)))
                (zip [1 ..] defaults))
-        MapErrorForm _ form -> go Nothing (path . InMapError) form
-        MapValueForm _ form -> go errs (path . InMapValue) form
+        MapErrorForm _ form -> go (path . InMapError) form
+        MapValueForm _ form -> go (path . InMapValue) form
         CeilingForm f form ->
-          fst ((unsafeUnreflect f) [] (go errs (path . InCeiling) form))
-        ApValueForm f x ->
-          go errs (path . InApLeft) f <> go errs (path . InApRight) x
+          fst ((unsafeUnreflect f) [] (go (path . InCeiling) form))
+        ApValueForm f x -> go (path . InApLeft) f <> go (path . InApRight) x
         ViewForm m -> unsafeUnreflect m
         FieldForm name required def m ->
           viewField
@@ -252,8 +265,5 @@ viewWithError inputs = go
                   case name of
                     DynamicFieldName -> pathToKey (path PathEnd)
                     StaticFieldName text -> Key text
-        ParseForm _ form -> go errs (path . InParse) form
-        FloorForm f form ->
-          let (view', errs') =
-                (unsafeUnreflect f) errs (go errs' (path . InFloor) form)
-           in view'
+        ParseForm _ form -> go (path . InParse) form
+        FloorForm _ _ form -> go (path . InFloor) form

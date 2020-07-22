@@ -162,7 +162,7 @@ runVerification =
         ValueForm {} -> pure ()
         MapValueForm _ f -> go f
         MapErrorForm _ f -> go f
-        FloorForm _ f -> go f
+        FloorForm _ _ f -> go f
         CeilingForm _ f -> go f
         ApValueForm f x -> go f >> go x
         BindForm _ f x -> go f >> go (x notSubmitted)

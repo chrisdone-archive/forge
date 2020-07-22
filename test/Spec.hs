@@ -354,23 +354,23 @@ floor =
                                     else Left (PasswordsMismatch a b))))
                          (let flooring =
                                 FloorForm
+                                  (pure (const Nothing))
                                   (pure
                                      (\merr v ->
-                                        ( v <>
-                                          case merr of
-                                            Nothing -> mempty
-                                            Just err ->
-                                              case err of
-                                                PasswordsMismatch _ _ ->
-                                                  p_ "passwords do not match"
-                                                LucidError er ->
-                                                  case er of
-                                                    MiscError e -> toHtml e
-                                                    InvalidInputFormat {} ->
-                                                      p_ "invalid input format"
-                                                    MissingInput {} ->
-                                                      p_ "missing input!"
-                                        , Nothing)))
+                                        (v <>
+                                         case merr of
+                                           Nothing -> mempty
+                                           Just err ->
+                                             case err of
+                                               PasswordsMismatch _ _ ->
+                                                 p_ "passwords do not match"
+                                               LucidError er ->
+                                                 case er of
+                                                   MiscError e -> toHtml e
+                                                   InvalidInputFormat {} ->
+                                                     p_ "invalid input format"
+                                                   MissingInput {} ->
+                                                     p_ "missing input!")))
                            in (((,) <$>
                                 flooring
                                   (MapErrorForm
